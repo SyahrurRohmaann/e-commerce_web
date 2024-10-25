@@ -72,16 +72,16 @@
 
           <div class="header-user-actions">
             <button class="action-btn">
-              <ion-icon name="person-outline"></ion-icon>
+              <i data-feather="heart"></i>
             </button>
 
             <button class="action-btn">
-              <ion-icon name="heart-outline"></ion-icon>
+              <i data-feather="shopping-cart"></i>
               <span class="count">0</span>
             </button>
 
             <button class="action-btn">
-              <ion-icon name="bag-handle-outline"></ion-icon>
+              <i data-feather="user"></i>
               <span class="count">0</span>
             </button>
           </div>
@@ -127,7 +127,7 @@
             </div>
           </div>
           <div class="view-all">
-            <button>View All</button>
+            <button class="new-arrival-btn">View All</button>
           </div>
         </div>
 
@@ -156,10 +156,13 @@
             </div>
           </div>
           <div class="view-all">
-            <button>View All</button>
+            <button class="top-selling-btn">View All</button>
           </div>
         </div>
       </main>
     </div>
+    <script>
+      feather.replace();
+    </script>
   </body>
 </html>
