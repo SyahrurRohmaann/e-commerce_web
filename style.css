@@ -268,27 +268,30 @@ ul li:hover ul.dropdown-list {
   display: flex;
   align-items: center;
   gap: 15px;
-  padding-left: 35px;
+  padding-left: 15px;
 }
 
 .header-user-actions .action-btn {
   position: relative;
   font-size: 35px;
-  color: #464646;
+  color: #fff;
   padding: 5px;
-  margin-left: 25px;
+  margin-left: 12px;
+  background: none;
+  border: none;
 }
 
 .header-user-actions .count {
   position: absolute;
   top: -2px;
   right: -3px;
-  background: hsl(0, 100%, 70%);
+  background: none;
   color: #ffffff;
   font-size: 12px;
   font-weight: 500;
   line-height: 1;
   padding: 2px 4px;
+  border: none;
   border-radius: 20px;
 }
 
