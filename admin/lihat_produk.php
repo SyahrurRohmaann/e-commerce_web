@@ -61,7 +61,7 @@ if (isset($_GET['delete'])) {
             padding-left: 8px;
         }
         .main-content {
-            margin-left: 220px;
+            margin-left: 200px;
             padding: 20px;
             flex-grow: 1;
             background: #fff;
@@ -85,19 +85,24 @@ if (isset($_GET['delete'])) {
         }
         .img-thumbnail {
             max-width: 50px;
+            margin-right: 5px;
         }
         .actions a {
             padding: 8px 12px;
-            margin: 0 4px;
+            margin: 0px;
             color: #fff;
             border-radius: 4px;
             text-decoration: none;
+            display: inline-block;
         }
         .actions a.edit {
             background-color: #4CAF50;
+            margin-left: 40px;
+            margin-bottom: 10px;
         }
         .actions a.delete {
             background-color: #f44336;
+            margin-left: 32px;
         }
     </style>
 </head>
@@ -129,7 +134,23 @@ if (isset($_GET['delete'])) {
                     <td><?= htmlspecialchars($produk['harga']) ?></td>
                     <td><?= htmlspecialchars($produk['stock']) ?></td>
                     <td><?= htmlspecialchars($produk['nama_kategori']) ?></td>
-                    <td><img src="../uploads/<?= htmlspecialchars($produk['gambar']) ?>" alt="Gambar Produk" class="img-thumbnail"></td>
+                    <td>
+    <?php
+    // Decode JSON gambar menjadi array
+    $gambarArray = json_decode($produk['gambar'], true);
+    
+    // Jika gambar adalah array (format JSON)
+    if (is_array($gambarArray)) {
+        foreach ($gambarArray as $gambar) {
+            echo '<img src="../uploads/' . htmlspecialchars($gambar) . '" alt="Gambar Produk" class="img-thumbnail">';
+        }
+    } else {
+        // Jika gambar adalah string (satuan), tampilkan satu gambar
+        echo '<img src="../uploads/' . htmlspecialchars($produk['gambar']) . '" alt="Gambar Produk" class="img-thumbnail">';
+    }
+    ?>
+</td>
+
                     <td><?= htmlspecialchars($produk['ukuran']) ?></td>
                     <td><?= htmlspecialchars($produk['keterangan']) ?></td>
                     <td><?= htmlspecialchars($produk['nama_admin']) ?></td>

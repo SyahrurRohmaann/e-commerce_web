@@ -85,7 +85,7 @@ $kategoriList = $stmt->fetchAll(PDO::FETCH_ASSOC);
             padding-left: 8px;
         }
         .main-content {
-            margin-left: 210px;
+            margin-left: 200px;
             padding: 20px;
             flex-grow: 1;
             background: #fff;

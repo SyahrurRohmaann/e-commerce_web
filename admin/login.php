@@ -11,8 +11,10 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $stmt->execute([$nama_admin]);
     $admin = $stmt->fetch();
 
+    // Memeriksa apakah admin ada dan password sesuai
     if ($admin && $pass === $admin['pass']) {
         $_SESSION['loggedin'] = true;
+        $_SESSION['id_admin'] = $admin['id_admin'];  // Menyimpan id_admin di sesi
         $_SESSION['nama_admin'] = $admin['nama_admin'];
         header("Location: dashboard.php");
         exit;
@@ -22,13 +24,13 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 }
 ?>
 
+
+
 <!DOCTYPE html>
 <html>
 <head>
     <title>Login</title>
-    <!-- Memasukkan CSS Bootstrap -->
     <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Memasukkan Font Awesome untuk ikon yang lebih menarik -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" rel="stylesheet">
     <style>
         body {
@@ -72,7 +74,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 </head>
 <body>
     <div class="login-container">
-        <h2> Admin Login</h2>
+        <h2>Admin Login</h2>
         <?php if(isset($error)): ?>
             <p class="error"><?php echo $error; ?></p>
         <?php endif; ?>

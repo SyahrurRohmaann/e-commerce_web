@@ -1,13 +1,21 @@
 <?php
+session_start(); // Memastikan sesi dimulai
+
 require 'db.php';
 
+// Pastikan admin sudah login
+if (!isset($_SESSION['loggedin']) || $_SESSION['loggedin'] !== true) {
+    header("Location: login.php");
+    exit;
+}
+
+// Mengambil daftar kategori
 $stmt = $pdo->prepare("SELECT id_kategori, nama_kategori FROM kategori");
 $stmt->execute();
 $kategoriList = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-$stmt = $pdo->prepare("SELECT id_admin, nama_admin FROM admin");
-$stmt->execute();
-$adminList = $stmt->fetchAll(PDO::FETCH_ASSOC);
+// Mengambil nama admin dari sesi
+$nama_admin = $_SESSION['nama_admin'];
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $nama = $_POST['nama'];
@@ -16,17 +24,12 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $nama_kategori = $_POST['nama_kategori'];
     $ukuran = $_POST['ukuran'];
     $keterangan = $_POST['keterangan'];
-    $nama_admin = $_POST['nama_admin'];
+    $id_admin = $_SESSION['id_admin'];
 
     $stmt = $pdo->prepare("SELECT id_kategori FROM kategori WHERE nama_kategori = ?");
     $stmt->execute([$nama_kategori]);
     $kategori = $stmt->fetch();
     $id_kategori = $kategori['id_kategori'];
-
-    $stmt = $pdo->prepare("SELECT id_admin FROM admin WHERE nama_admin = ?");
-    $stmt->execute([$nama_admin]);
-    $admin = $stmt->fetch();
-    $id_admin = $admin['id_admin'];
 
     $gambar_paths = [];
     if (!empty($_FILES['gambar']['name'][0])) {
@@ -66,7 +69,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             background-color: #f5f5f5;
         }
         .main-content {
-            margin-left: 210px;
+            margin-left: 200px;
             padding: 20px;
             flex-grow: 1;
             background: #fff;
@@ -89,6 +92,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             margin-bottom: 15px;
             border: 1px solid #ddd;
             border-radius: 5px;
+        }
+        input[readonly] {
+            background-color: #e9ecef;
+            color: #6c757d;
         }
         button {
             padding: 10px 15px;
@@ -140,11 +147,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             <textarea id="keterangan" name="keterangan" required></textarea>
 
             <label for="nama_admin">Admin:</label>
-            <select id="nama_admin" name="nama_admin" required>
-                <?php foreach ($adminList as $admin): ?>
-                    <option value="<?= $admin['nama_admin'] ?>"><?= $admin['nama_admin'] ?></option>
-                <?php endforeach; ?>
-            </select>
+            <input type="text" id="nama_admin" name="nama_admin" value="<?= htmlspecialchars($nama_admin) ?>" readonly>
 
             <button type="submit">Tambah Produk</button>
         </form>

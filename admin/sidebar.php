@@ -50,10 +50,27 @@
         </div>
         <a href="kategori.php">Kategori</a>
         <a href="pengguna.php">Pengguna</a>
+        
+        <a class="dropdown-btn2">Transaksi</a>
+        <div class="dropdown-container">
+            <a href="tambah_transaksi.php">Tambah Transaksi</a>
+            <a href="lihat_transaksi.php">Lihat Transaksi</a>
+        </div>
         <a href="logout.php" class="logout">Log Out</a>
     </div>
     <script>
         document.querySelector('.dropdown-btn').addEventListener('click', function() {
+            this.classList.toggle('active');
+            var dropdownContent = this.nextElementSibling;
+            if (dropdownContent.style.display === "block") {
+                dropdownContent.style.display = "none";
+            } else {
+                dropdownContent.style.display = "block";
+            }
+        });
+
+
+        document.querySelector('.dropdown-btn2').addEventListener('click', function() {
             this.classList.toggle('active');
             var dropdownContent = this.nextElementSibling;
             if (dropdownContent.style.display === "block") {
