@@ -28,7 +28,7 @@ $totalKategori = $pdo->query("SELECT COUNT(*) FROM Kategori")->fetchColumn();
             background-color: #f5f5f5;
         }
         .main-content {
-            margin-left: 200px;
+            margin-left: 190px;
             padding: 20px;
             flex-grow: 1;
             background: #fff;
@@ -82,7 +82,7 @@ $totalKategori = $pdo->query("SELECT COUNT(*) FROM Kategori")->fetchColumn();
                 <p>Total Kategori</p>
             </div>
         </div>
-        <h3>Halo, <?php echo htmlspecialchars($_SESSION['nama_admin']); ?></h3>
+        <h2>Halo, <?php echo htmlspecialchars($_SESSION['nama_admin']); ?></h2>
         
         <div class="chart-container">
             <canvas id="myChart" width="400" height="200"></canvas>
@@ -91,22 +91,17 @@ $totalKategori = $pdo->query("SELECT COUNT(*) FROM Kategori")->fetchColumn();
 
     <script>
         fetch('get_data.php')
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error('Network response was not ok ' + response.statusText);
-                }
-                return response.json();
-            })
+            .then(response => response.json())
             .then(data => {
                 if (Array.isArray(data) && data.length > 0) {
                     // Warna untuk setiap kategori
                     const colors = [
-                        'rgba(255, 99, 132, 0.2)',
-                        'rgba(54, 162, 235, 0.2)',
-                        'rgba(255, 206, 86, 0.2)',
-                        'rgba(75, 192, 192, 0.2)',
-                        'rgba(153, 102, 255, 0.2)',
-                        'rgba(255, 159, 64, 0.2)'
+                        'rgba(255, 99, 132, 0.8)',
+                        'rgba(54, 162, 235, 0.8)',
+                        'rgba(255, 206, 86, 0.8)',
+                        'rgba(75, 192, 192, 0.8)',
+                        'rgba(153, 102, 255, 0.8)',
+                        'rgba(255, 159, 64, 0.8)'
                     ];
 
                     const borderColors = [
@@ -150,6 +145,16 @@ $totalKategori = $pdo->query("SELECT COUNT(*) FROM Kategori")->fetchColumn();
                             scales: {
                                 y: {
                                     beginAtZero: true
+                                }
+                            },
+                            plugins: {
+                                legend: {
+                                    labels: {
+                                        color: 'rgb(0, 0, 0)', // Warna label legend lebih kontras
+                                        font: {
+                                            size: 14 // Ukuran font lebih besar
+                                        }
+                                    }
                                 }
                             }
                         }

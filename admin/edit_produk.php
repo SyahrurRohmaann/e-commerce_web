@@ -1,8 +1,10 @@
 <?php
+session_start();
 require 'db.php';
 
 $id_produk = $_GET['id'];
 
+// Query produk berdasarkan id_produk
 $sql = "SELECT p.*, k.nama_kategori, a.nama_admin
         FROM Produk p
         JOIN Kategori k ON p.id_kategori = k.id_kategori
@@ -12,13 +14,12 @@ $stmt = $pdo->prepare($sql);
 $stmt->execute([$id_produk]);
 $produk = $stmt->fetch(PDO::FETCH_ASSOC);
 
+// Query semua kategori
 $stmt = $pdo->prepare("SELECT id_kategori, nama_kategori FROM kategori");
 $stmt->execute();
 $kategoriList = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-$stmt = $pdo->prepare("SELECT id_admin, nama_admin FROM admin");
-$stmt->execute();
-$adminList = $stmt->fetchAll(PDO::FETCH_ASSOC);
+$nama_admin = $_SESSION['nama_admin'];
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $nama = $_POST['nama'];
@@ -27,17 +28,13 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $nama_kategori = $_POST['nama_kategori'];
     $ukuran = $_POST['ukuran'];
     $keterangan = $_POST['keterangan'];
-    $nama_admin = $_POST['nama_admin'];
 
     $stmt = $pdo->prepare("SELECT id_kategori FROM kategori WHERE nama_kategori = ?");
     $stmt->execute([$nama_kategori]);
     $kategori = $stmt->fetch();
     $id_kategori = $kategori['id_kategori'];
 
-    $stmt = $pdo->prepare("SELECT id_admin FROM admin WHERE nama_admin = ?");
-    $stmt->execute([$nama_admin]);
-    $admin = $stmt->fetch();
-    $id_admin = $admin['id_admin'];
+    $id_admin = $_SESSION['id_admin']; // Mengambil id_admin dari session
 
     if ($_FILES['gambar']['name']) {
         $gambar = $_FILES['gambar']['name'];
@@ -115,6 +112,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         img {
             margin-top: 10px;
         }
+        input[readonly] { background-color: #e9ecef; color: #6c757d; }
     </style>
 </head>
 <body>
@@ -142,7 +140,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
             <label for="gambar">Gambar:</label>
             <input type="file" id="gambar" name="gambar">
-            <img src="../uploads/<?= htmlspecialchars($produk['gambar']) ?>" alt="Pratinjau Gambar" width="100">
+            <?php if ($produk['gambar']): ?>
+                <img src="../uploads/<?= htmlspecialchars($produk['gambar']) ?>" alt="Pratinjau Gambar" width="100">
+            <?php endif; ?>
 
             <label for="ukuran">Ukuran:</label>
             <select id="ukuran" name="ukuran" required>
@@ -156,13 +156,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             <textarea id="keterangan" name="keterangan" required><?= htmlspecialchars($produk['keterangan']) ?></textarea>
 
             <label for="nama_admin">Admin:</label>
-            <select id="nama_admin" name="nama_admin" required>
-                <?php foreach ($adminList as $admin): ?>
-                    <option value="<?= htmlspecialchars($admin['nama_admin']) ?>" <?= ($admin['id_admin'] == $produk['id_admin']) ? 'selected' : '' ?>>
-                        <?= htmlspecialchars($admin['nama_admin']) ?>
-                    </option>
-                <?php endforeach; ?>
-            </select>
+            <input type="text" id="nama_admin" name="nama_admin" value="<?= htmlspecialchars($nama_admin) ?>" readonly>
 
             <button type="submit">Update Produk</button>
         </form>

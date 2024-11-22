@@ -1,8 +1,17 @@
 <!DOCTYPE html>
-<html>
+<html lang="id">
 <head>
-    <title>Sidebar</title>
+    <title>Sidebar dengan Ikon</title>
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            min-height: 100vh;
+            margin: 0;
+            background-color: #f5f5f5;
+        }
         .sidebar {
             height: 100%;
             width: 200px;
@@ -17,7 +26,8 @@
             text-decoration: none;
             font-size: 18px;
             color: #818181;
-            display: block;
+            display: flex;
+            align-items: center;
             border: none;
             background: none;
             width: 100%;
@@ -38,25 +48,28 @@
             bottom: 50px;
             width: 100%;
         }
+        .sidebar i {
+            margin-right: 10px;
+        }
     </style>
 </head>
 <body>
     <div class="sidebar">
-        <a href="dashboard.php">Home</a>
-        <a class="dropdown-btn">Produk</a>
+        <a href="dashboard.php"><i class="fas fa-home"></i> Home</a>
+        <a class="dropdown-btn"><i class="fas fa-box"></i> Produk</a>
         <div class="dropdown-container">
-            <a href="tambah_produk.php">Tambah Produk</a>
-            <a href="lihat_produk.php">Lihat Produk</a>
+            <a href="tambah_produk.php"><i class="fas fa-plus"></i> Tambah Produk</a>
+            <a href="lihat_produk.php"><i class="fas fa-eye"></i> Lihat Produk</a>
         </div>
-        <a href="kategori.php">Kategori</a>
-        <a href="pengguna.php">Pengguna</a>
+        <a href="kategori.php"><i class="fas fa-list"></i> Kategori</a>
+        <a href="pengguna.php"><i class="fas fa-users"></i> Pengguna</a>
         
-        <a class="dropdown-btn2">Transaksi</a>
+        <a class="dropdown-btn2"><i class="fas fa-file-invoice"></i> Transaksi</a>
         <div class="dropdown-container">
-            <a href="tambah_transaksi.php">Tambah Transaksi</a>
-            <a href="lihat_transaksi.php">Lihat Transaksi</a>
+            <a href="tambah_transaksi.php"><i class="fas fa-plus"></i> Tambah Transaksi</a>
+            <a href="lihat_transaksi.php"><i class="fas fa-eye"></i> Lihat Transaksi</a>
         </div>
-        <a href="logout.php" class="logout">Log Out</a>
+        <a href="logout.php" class="logout"><i class="fas fa-sign-out-alt"></i> Log Out</a>
     </div>
     <script>
         document.querySelector('.dropdown-btn').addEventListener('click', function() {
@@ -68,7 +81,6 @@
                 dropdownContent.style.display = "block";
             }
         });
-
 
         document.querySelector('.dropdown-btn2').addEventListener('click', function() {
             this.classList.toggle('active');

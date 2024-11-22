@@ -3,6 +3,7 @@ require_once 'db.php';
 
 $message = '';
 
+// Menangani pembaruan pengguna
 if (isset($_POST['edit'])) {
     $id_user = $_POST['id_user'];
     $nama_user = $_POST['nama_user'];
@@ -16,6 +17,7 @@ if (isset($_POST['edit'])) {
     }
 }
 
+// Menangani penghapusan pengguna
 if (isset($_POST['delete'])) {
     $id_user = $_POST['id_user'];
     $sql = "DELETE FROM pengguna WHERE id_user = ?";
@@ -27,15 +29,33 @@ if (isset($_POST['delete'])) {
     }
 }
 
-$sql = "SELECT id_user, nama_user, email FROM pengguna";
-$stmt = $pdo->query($sql);
+// Fungsi Pencarian dan Pagination
+$search = isset($_GET['search']) ? $_GET['search'] : '';
+$limit = 10;
+$page = isset($_GET['page']) ? $_GET['page'] : 1;
+$offset = ($page - 1) * $limit;
+
+$sql = "SELECT id_user, nama_user, email FROM pengguna WHERE nama_user LIKE :search ORDER BY id_user DESC LIMIT :limit OFFSET :offset";
+$stmt = $pdo->prepare($sql);
+$stmt->bindValue(':search', '%' . $search . '%', PDO::PARAM_STR);
+$stmt->bindValue(':limit', (int) $limit, PDO::PARAM_INT);
+$stmt->bindValue(':offset', (int) $offset, PDO::PARAM_INT);
+$stmt->execute();
 $penggunaList = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+$count_sql = "SELECT COUNT(*) FROM pengguna WHERE nama_user LIKE :search";
+$count_stmt = $pdo->prepare($count_sql);
+$count_stmt->bindValue(':search', '%' . $search . '%', PDO::PARAM_STR);
+$count_stmt->execute();
+$total_pengguna = $count_stmt->fetchColumn();
+$total_pages = ceil($total_pengguna / $limit);
 ?>
 
 <!DOCTYPE html>
-<html>
+<html lang="id">
 <head>
     <title>Kelola Pengguna</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -115,11 +135,20 @@ $penggunaList = $stmt->fetchAll(PDO::FETCH_ASSOC);
     <div class="main-content">
         <h1>Kelola Pengguna</h1>
         <?php if($message): ?>
-            <div class="notification"><?= htmlspecialchars($message) ?></div>
+            <div class="alert alert-info"><?= htmlspecialchars($message) ?></div>
         <?php endif; ?>
-        <h2>Daftar Pengguna</h2>
-        <table>
-            <thead>
+
+        <!-- Form Pencarian -->
+        <form method="GET" action="pengguna.php" class="mb-3">
+            <div class="input-group mb-3">
+                <input type="text" name="search" value="<?= htmlspecialchars($search) ?>" class="form-control" placeholder="Cari Pengguna...">
+                <button type="submit" class="btn btn-success">Cari</button>
+            </div>
+        </form>
+        
+        <br>
+        <table class="table table-striped table-hover">
+            <thead class="table-dark">
                 <tr>
                     <th>ID</th>
                     <th>Nama User</th>
@@ -136,19 +165,31 @@ $penggunaList = $stmt->fetchAll(PDO::FETCH_ASSOC);
                     <td>
                         <form method="post" action="pengguna.php" style="display:inline-block;">
                             <input type="hidden" name="id_user" value="<?= $pengguna['id_user'] ?>">
-                            <input type="text" name="nama_user" value="<?= htmlspecialchars($pengguna['nama_user']) ?>" style="font-size: 12px; width: 100px;">
-                            <input type="text" name="email" value="<?= htmlspecialchars($pengguna['email']) ?>" style="font-size: 12px; width: 150px;">
-                            <input type="submit" name="edit" value="Edit" style="background-color: #ff9800; color: white; border: none; padding: 3px 8px; border-radius: 5px; font-size: 12px; margin-right: 5px;">
+                            <input type="text" class="form-control d-inline-block" name="nama_user" value="<?= htmlspecialchars($pengguna['nama_user']) ?>" style="font-size: 12px; width: 100px;">
+                            <input type="text" class="form-control d-inline-block" name="email" value="<?= htmlspecialchars($pengguna['email']) ?>" style="font-size: 12px; width: 150px;">
+                            <button type="submit" name="edit" class="btn btn-warning btn-sm">Edit</button>
                         </form>
                         <form method="post" action="pengguna.php" style="display:inline-block;">
                             <input type="hidden" name="id_user" value="<?= $pengguna['id_user'] ?>">
-                            <input type="submit" name="delete" value="Hapus" onclick="return confirm('Yakin ingin menghapus pengguna ini?')" style="background-color: #f44336; color: white; border: none; padding: 3px 8px; border-radius: 5px; font-size: 12px;">
+                            <button type="submit" name="delete" class="btn btn-danger btn-sm" onclick="return confirm('Yakin ingin menghapus pengguna ini?')">Hapus</button>
                         </form>
                     </td>
                 </tr>
                 <?php endforeach; ?>
             </tbody>
         </table>
+
+        <!-- Pagination -->
+        <nav aria-label="Page navigation example">
+            <ul class="pagination justify-content-center">
+                <?php for ($i = 1; $i <= $total_pages; $i++): ?>
+                    <li class="page-item <?= $i == $page ? 'active' : '' ?>">
+                        <a class="page-link" href="pengguna.php?page=<?= $i ?>&search=<?= htmlspecialchars($search) ?>"><?= $i ?></a>
+                    </li>
+                <?php endfor; ?>
+            </ul>
+        </nav>
     </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

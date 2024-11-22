@@ -11,10 +11,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $stmt->execute([$nama_admin]);
     $admin = $stmt->fetch();
 
-    // Memeriksa apakah admin ada dan password sesuai
     if ($admin && $pass === $admin['pass']) {
         $_SESSION['loggedin'] = true;
-        $_SESSION['id_admin'] = $admin['id_admin'];  // Menyimpan id_admin di sesi
+        $_SESSION['id_admin'] = $admin['id_admin'];  
         $_SESSION['nama_admin'] = $admin['nama_admin'];
         header("Location: dashboard.php");
         exit;
@@ -90,8 +89,5 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             <button type="submit" class="btn btn-primary btn-block">Login</button>
         </form>
     </div>
-    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js"></script>
-    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
 </body>
 </html>

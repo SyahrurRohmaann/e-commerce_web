@@ -1,27 +1,21 @@
-<?php
-require 'db.php';
+<?php require 'db.php'; $limit = 10;
+ // Number of products per page
+  $page = isset($_GET['page']) ? $_GET['page'] : 1;
+   // Get the current page or default to 1
+    $offset = ($page - 1) * $limit;
+     // Calculate the offset
+      $search = isset($_GET['search']) ? $_GET['search'] : '';
+       // Get the search term
+        $sql = "SELECT p.*, k.nama_kategori, a.nama_admin FROM produk p JOIN kategori k ON p.id_kategori = k.id_kategori JOIN admin a ON p.id_admin = a.id_admin WHERE p.nama LIKE :search ORDER BY p.id_produk DESC LIMIT :limit OFFSET :offset"; $stmt = $pdo->prepare($sql); $stmt->bindValue(':search', '%' . $search . '%', PDO::PARAM_STR); $stmt->bindValue(':limit', $limit, PDO::PARAM_INT); $stmt->bindValue(':offset', $offset, PDO::PARAM_INT); $stmt->execute(); $produks = $stmt->fetchAll(PDO::FETCH_ASSOC);
+         // Get the total number of products for pagination
+          $count_sql = "SELECT COUNT(*) FROM produk WHERE nama LIKE :search"; $count_stmt = $pdo->prepare($count_sql); $count_stmt->bindValue(':search', '%' . $search . '%', PDO::PARAM_STR); $count_stmt->execute(); $total_products = $count_stmt->fetchColumn(); $total_pages = ceil($total_products / $limit); if (isset($_GET['delete'])) { $id_produk = $_GET['delete']; $sql = "DELETE FROM produk WHERE id_produk = ?"; $stmt = $pdo->prepare($sql); $stmt->execute([$id_produk]); header("Location: lihat_produk.php"); exit(); } ?>
 
-$sql = "SELECT p.*, k.nama_kategori, a.nama_admin
-        FROM Produk p
-        JOIN Kategori k ON p.id_kategori = k.id_kategori
-        JOIN Admin a ON p.id_admin = a.id_admin";
-$stmt = $pdo->query($sql);
-$produks = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-if (isset($_GET['delete'])) {
-    $id_produk = $_GET['delete'];
-    $sql = "DELETE FROM Produk WHERE id_produk = ?";
-    $stmt = $pdo->prepare($sql);
-    $stmt->execute([$id_produk]);
-    header("Location: lihat_produk.php");
-    exit();
-}
-?>
 
 <!DOCTYPE html>
-<html>
+<html lang="id">
 <head>
     <title>Lihat Produk</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -68,20 +62,8 @@ if (isset($_GET['delete'])) {
             border-radius: 8px;
             box-shadow: 0 0 10px rgba(0,0,0,0.1);
         }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-bottom: 20px;
-        }
-        table, th, td {
-            border: 1px solid #ddd;
-        }
-        th, td {
-            padding: 12px;
-            text-align: left;
-        }
-        th {
-            background-color: #f2f2f2;
+        .table th, .table td {
+            vertical-align: middle;
         }
         .img-thumbnail {
             max-width: 50px;
@@ -97,12 +79,15 @@ if (isset($_GET['delete'])) {
         }
         .actions a.edit {
             background-color: #4CAF50;
-            margin-left: 40px;
-            margin-bottom: 10px;
+            margin-left: 5px;
         }
         .actions a.delete {
             background-color: #f44336;
-            margin-left: 32px;
+            margin-left: 5px;
+        }
+
+        .form-control{
+        width: 70%;
         }
     </style>
 </head>
@@ -110,9 +95,18 @@ if (isset($_GET['delete'])) {
     <?php include 'sidebar.php'; ?>
     <div class="main-content">
         <h1>Lihat Produk</h1>
-        <h2>Produk</h2>
-        <table>
-            <thead>
+        
+        <!-- Search form -->
+        <form method="GET" action="lihat_produk.php" class="mb-3">
+        <div class="input-group mb-3">
+            <input type="text" name="search" value="<?= htmlspecialchars($search) ?>" placeholder="Cari produk..." class="form-control">
+            <button type="submit" class="btn btn-success">Cari</button>
+        </div>
+        </form>
+        
+        <br>
+        <table class="table table-striped table-hover table-bordered">
+            <thead class="table-dark">
                 <tr>
                     <th>ID</th>
                     <th>Nama</th>
@@ -135,33 +129,44 @@ if (isset($_GET['delete'])) {
                     <td><?= htmlspecialchars($produk['stock']) ?></td>
                     <td><?= htmlspecialchars($produk['nama_kategori']) ?></td>
                     <td>
-    <?php
-    // Decode JSON gambar menjadi array
-    $gambarArray = json_decode($produk['gambar'], true);
-    
-    // Jika gambar adalah array (format JSON)
-    if (is_array($gambarArray)) {
-        foreach ($gambarArray as $gambar) {
-            echo '<img src="../uploads/' . htmlspecialchars($gambar) . '" alt="Gambar Produk" class="img-thumbnail">';
-        }
-    } else {
-        // Jika gambar adalah string (satuan), tampilkan satu gambar
-        echo '<img src="../uploads/' . htmlspecialchars($produk['gambar']) . '" alt="Gambar Produk" class="img-thumbnail">';
-    }
-    ?>
-</td>
-
+                        <?php
+                        // Decode JSON gambar menjadi array
+                        $gambarArray = json_decode($produk['gambar'], true);
+                        
+                        // Jika gambar adalah array (format JSON)
+                        if (is_array($gambarArray)) {
+                            foreach ($gambarArray as $gambar) {
+                                echo '<img src="../uploads/' . htmlspecialchars($gambar) . '" alt="Gambar Produk" class="img-thumbnail">';
+                            }
+                        } else {
+                            // Jika gambar adalah string (satuan), tampilkan satu gambar
+                            echo '<img src="../uploads/' . htmlspecialchars($produk['gambar']) . '" alt="Gambar Produk" class="img-thumbnail">';
+                        }
+                        ?>
+                    </td>
                     <td><?= htmlspecialchars($produk['ukuran']) ?></td>
                     <td><?= htmlspecialchars($produk['keterangan']) ?></td>
                     <td><?= htmlspecialchars($produk['nama_admin']) ?></td>
                     <td class="actions">
-                        <a href="edit_produk.php?id=<?= htmlspecialchars($produk['id_produk']) ?>" class="edit">Edit</a>
-                        <a href="lihat_produk.php?delete=<?= htmlspecialchars($produk['id_produk']) ?>" class="delete" onclick="return confirm('Yakin ingin menghapus?')">Hapus</a>
+                        <a href="edit_produk.php?id=<?= htmlspecialchars($produk['id_produk']) ?>" class="btn btn-success btn-sm edit">Edit</a>
+                        <a href="lihat_produk.php?delete=<?= htmlspecialchars($produk['id_produk']) ?>" class="btn btn-danger btn-sm delete" onclick="return confirm('Yakin ingin menghapus?')">Hapus</a>
                     </td>
                 </tr>
                 <?php endforeach; ?>
             </tbody>
         </table>
+        
+        <!-- Pagination -->
+        <nav aria-label="Page navigation example">
+            <ul class="pagination justify-content-center">
+                <?php for ($i = 1; $i <= $total_pages; $i++): ?>
+                    <li class="page-item <?= $i == $page ? 'active' : '' ?>">
+                        <a class="page-link" href="lihat_produk.php?page=<?= $i ?>&search=<?= htmlspecialchars($search) ?>"><?= $i ?></a>
+                    </li>
+                <?php endfor; ?>
+            </ul>
+        </nav>
     </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

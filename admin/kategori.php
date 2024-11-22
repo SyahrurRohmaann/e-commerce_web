@@ -3,6 +3,7 @@ require_once 'db.php';
 
 $message = '';
 
+// Menangani penambahan kategori
 if (isset($_POST['add'])) {
     $nama_kategori = $_POST['nama_kategori'];
     $sql = "INSERT INTO kategori (nama_kategori) VALUES (?)";
@@ -14,6 +15,7 @@ if (isset($_POST['add'])) {
     }
 }
 
+// Menangani pembaruan kategori
 if (isset($_POST['edit'])) {
     $id_kategori = $_POST['id_kategori'];
     $nama_kategori = $_POST['nama_kategori'];
@@ -26,6 +28,7 @@ if (isset($_POST['edit'])) {
     }
 }
 
+// Menangani penghapusan kategori
 if (isset($_POST['delete'])) {
     $id_kategori = $_POST['id_kategori'];
     $sql = "DELETE FROM kategori WHERE id_kategori = ?";
@@ -37,15 +40,33 @@ if (isset($_POST['delete'])) {
     }
 }
 
-$sql = "SELECT id_kategori, nama_kategori FROM kategori";
-$stmt = $pdo->query($sql);
+// Fungsi Pencarian dan Pagination
+$search = isset($_GET['search']) ? $_GET['search'] : '';
+$limit = 10;
+$page = isset($_GET['page']) ? $_GET['page'] : 1;
+$offset = ($page - 1) * $limit;
+
+$sql = "SELECT id_kategori, nama_kategori FROM kategori WHERE nama_kategori LIKE :search ORDER BY id_kategori DESC LIMIT :limit OFFSET :offset";
+$stmt = $pdo->prepare($sql);
+$stmt->bindValue(':search', '%' . $search . '%', PDO::PARAM_STR);
+$stmt->bindValue(':limit', (int) $limit, PDO::PARAM_INT);
+$stmt->bindValue(':offset', (int) $offset, PDO::PARAM_INT);
+$stmt->execute();
 $kategoriList = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+$count_sql = "SELECT COUNT(*) FROM kategori WHERE nama_kategori LIKE :search";
+$count_stmt = $pdo->prepare($count_sql);
+$count_stmt->bindValue(':search', '%' . $search . '%', PDO::PARAM_STR);
+$count_stmt->execute();
+$total_kategori = $count_stmt->fetchColumn();
+$total_pages = ceil($total_kategori / $limit);
 ?>
 
 <!DOCTYPE html>
-<html>
+<html lang="id">
 <head>
     <title>Kelola Kategori</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -95,66 +116,6 @@ $kategoriList = $stmt->fetchAll(PDO::FETCH_ASSOC);
         h1 {
             margin-top: 0;
         }
-        form {
-            display: flex;
-            flex-direction: column;
-            margin-bottom: 20px;
-        }
-        input[type="text"], input[type="submit"] {
-            padding: 8px;
-            margin-top: 5px;
-            margin-bottom: 15px;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-        }
-        input[type="submit"] {
-            background-color: #4CAF50;
-            color: white;
-            border: none;
-            cursor: pointer;
-            transition: background-color 0.3s;
-        }
-        input[type="submit"]:hover {
-            background-color: #45a049;
-        }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-bottom: 20px;
-        }
-        table, th, td {
-            border: 1px solid #ddd;
-        }
-        th, td {
-            padding: 10px;
-            text-align: left;
-            font-size: 14px;
-        }
-        th {
-            background-color: #f2f2f2;
-            border-bottom: 2px solid #ddd;
-        }
-        tr:nth-child(even) {
-            background-color: #f9f9f9;
-        }
-        tr:hover {
-            background-color: #f1f1f1;
-        }
-        .actions input[type="submit"] {
-            padding: 5px 10px;
-            margin: 2px;
-            border-radius: 5px;
-            cursor: pointer;
-            border: none;
-        }
-        .actions .edit {
-            background-color: #ff9800;
-            color: white;
-        }
-        .actions .delete {
-            background-color: #f44336;
-            color: white;
-        }
         .notification {
             margin-bottom: 20px;
             padding: 10px;
@@ -170,15 +131,29 @@ $kategoriList = $stmt->fetchAll(PDO::FETCH_ASSOC);
     <div class="main-content">
         <h1>Kelola Kategori</h1>
         <?php if($message): ?>
-            <div class="notification"><?= htmlspecialchars($message) ?></div>
+            <div class="alert alert-info"><?= htmlspecialchars($message) ?></div>
         <?php endif; ?>
-        <form method="post" action="kategori.php">
-            <input type="text" name="nama_kategori" placeholder="Nama Kategori" required>
-            <input type="submit" name="add" value="Tambah Kategori">
+        
+        <!-- Form Pencarian -->
+        <form method="GET" action="kategori.php" class="mb-3">
+            <div class="input-group mb-3">
+                <input type="text" name="search" value="<?= htmlspecialchars($search) ?>" class="form-control" placeholder="Cari Kategori...">
+                <button type="submit" class="btn btn-success">Cari</button>
+            </div>
         </form>
+
+
+
         <h2>Daftar Kategori</h2>
-        <table>
-            <thead>
+                <!-- Form Tambah Kategori -->
+                <form method="post" action="kategori.php" class="mb-3">
+            <div class="input-group mb-3">
+                <input type="text" name="nama_kategori" class="form-control" placeholder="Nama Kategori" required>
+                <button type="submit" name="add" class="btn btn-success">Tambah Kategori</button>
+            </div>
+        </form>
+        <table class="table table-striped table-hover table-bordered">
+            <thead class="table-dark">
                 <tr>
                     <th>ID</th>
                     <th>Nama Kategori</th>
@@ -191,20 +166,34 @@ $kategoriList = $stmt->fetchAll(PDO::FETCH_ASSOC);
                     <td><?= htmlspecialchars($kategori['id_kategori']) ?></td>
                     <td><?= htmlspecialchars($kategori['nama_kategori']) ?></td>
                     <td class="actions">
-                        <form method="post" action="kategori.php" style="display:inline-block;">
+                        <form method="post" action="kategori.php" class="d-inline-block">
                             <input type="hidden" name="id_kategori" value="<?= $kategori['id_kategori'] ?>">
-                            <input type="text" name="nama_kategori" value="<?= htmlspecialchars($kategori['nama_kategori']) ?>" style="font-size: 12px; width: 120px;">
-                            <input type="submit" name="edit" value="Edit" class="edit">
+                            <div class="input-group">
+                                <input type="text" name="nama_kategori" value="<?= htmlspecialchars($kategori['nama_kategori']) ?>" class="form-control form-control-sm" required>
+                                <button type="submit" name="edit" class="btn btn-warning btn-sm">Edit</button>
+                            </div>
                         </form>
-                        <form method="post" action="kategori.php" style="display:inline-block;">
+                        <form method="post" action="kategori.php" class="d-inline-block">
                             <input type="hidden" name="id_kategori" value="<?= $kategori['id_kategori'] ?>">
-                            <input type="submit" name="delete" value="Hapus" onclick="return confirm('Yakin ingin menghapus kategori ini?')" class="delete">
+                            <button type="submit" name="delete" class="btn btn-danger btn-sm" onclick="return confirm('Yakin ingin menghapus kategori ini?')">Hapus</button>
                         </form>
                     </td>
                 </tr>
                 <?php endforeach; ?>
             </tbody>
         </table>
+
+        <!-- Pagination -->
+        <nav aria-label="Page navigation example">
+            <ul class="pagination justify-content-center">
+                <?php for ($i = 1; $i <= $total_pages; $i++): ?>
+                    <li class="page-item <?= $i == $page ? 'active' : '' ?>">
+                        <a class="page-link" href="kategori.php?page=<?= $i ?>&search=<?= htmlspecialchars($search) ?>"><?= $i ?></a>
+                    </li>
+                <?php endfor; ?>
+            </ul>
+        </nav>
     </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

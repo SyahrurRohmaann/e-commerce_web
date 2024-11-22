@@ -1,20 +1,17 @@
 <?php
-session_start(); // Memastikan sesi dimulai
+session_start(); 
 
 require 'db.php';
 
-// Pastikan admin sudah login
 if (!isset($_SESSION['loggedin']) || $_SESSION['loggedin'] !== true) {
     header("Location: login.php");
     exit;
 }
 
-// Mengambil daftar kategori
 $stmt = $pdo->prepare("SELECT id_kategori, nama_kategori FROM kategori");
 $stmt->execute();
 $kategoriList = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-// Mengambil nama admin dari sesi
 $nama_admin = $_SESSION['nama_admin'];
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
@@ -57,9 +54,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 ?>
 
 <!DOCTYPE html>
-<html>
+<html lang="id">
 <head>
     <title>Tambah Produk</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -76,37 +74,25 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             border-radius: 8px;
             box-shadow: 0 0 10px rgba(0,0,0,0.1);
         }
-        h1 {
-            margin-top: 0;
-        }
-        form {
-            display: flex;
-            flex-direction: column;
-        }
-        label {
+        .form-label {
             margin-top: 10px;
         }
-        input[type="text"], input[type="number"], select, textarea, input[type="file"] {
-            padding: 10px;
+        .form-control, .form-select, .form-control-file {
             margin-top: 5px;
             margin-bottom: 15px;
-            border: 1px solid #ddd;
-            border-radius: 5px;
         }
         input[readonly] {
             background-color: #e9ecef;
             color: #6c757d;
         }
-        button {
+        .btn-primary {
             padding: 10px 15px;
             background-color: #4CAF50;
-            color: white;
             border: none;
-            border-radius: 5px;
             cursor: pointer;
             transition: background-color 0.3s;
         }
-        button:hover {
+        .btn-primary:hover {
             background-color: #45a049;
         }
     </style>
@@ -116,41 +102,50 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     <div class="main-content">
         <h1>Tambah Produk</h1>
         <form action="tambah_produk.php" method="post" enctype="multipart/form-data">
-            <label for="nama">Nama:</label>
-            <input type="text" id="nama" name="nama" required>
-
-            <label for="harga">Harga:</label>
-            <input type="number" id="harga" name="harga" required>
-
-            <label for="stock">Stock:</label>
-            <input type="number" id="stock" name="stock" required>
-
-            <label for="nama_kategori">Kategori:</label>
-            <select id="nama_kategori" name="nama_kategori" required>
-                <?php foreach ($kategoriList as $kategori): ?>
-                    <option value="<?= $kategori['nama_kategori'] ?>"><?= $kategori['nama_kategori'] ?></option>
-                <?php endforeach; ?>
-            </select>
-
-            <label for="gambar">Gambar:</label>
-            <input type="file" id="gambar" name="gambar[]" multiple required>
-
-            <label for="ukuran">Ukuran:</label>
-            <select id="ukuran" name="ukuran" required>
-                <option value="S">S</option>
-                <option value="M">M</option>
-                <option value="L">L</option>
-                <option value="XL">XL</option>
-            </select>
-
-            <label for="keterangan">Keterangan:</label>
-            <textarea id="keterangan" name="keterangan" required></textarea>
-
-            <label for="nama_admin">Admin:</label>
-            <input type="text" id="nama_admin" name="nama_admin" value="<?= htmlspecialchars($nama_admin) ?>" readonly>
-
-            <button type="submit">Tambah Produk</button>
+            <div class="mb-3">
+                <label for="nama" class="form-label">Nama:</label>
+                <input type="text" id="nama" name="nama" class="form-control" required>
+            </div>
+            <div class="mb-3">
+                <label for="harga" class="form-label">Harga:</label>
+                <input type="number" id="harga" name="harga" class="form-control" required>
+            </div>
+            <div class="mb-3">
+                <label for="stock" class="form-label">Stock:</label>
+                <input type="number" id="stock" name="stock" class="form-control" required>
+            </div>
+            <div class="mb-3">
+                <label for="nama_kategori" class="form-label">Kategori:</label>
+                <select id="nama_kategori" name="nama_kategori" class="form-select" required>
+                    <?php foreach ($kategoriList as $kategori): ?>
+                        <option value="<?= $kategori['nama_kategori'] ?>"><?= $kategori['nama_kategori'] ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            <div class="mb-3">
+                <label for="gambar" class="form-label">Gambar:</label>
+                <input type="file" id="gambar" name="gambar[]" class="form-control-file" multiple required>
+            </div>
+            <div class="mb-3">
+                <label for="ukuran" class="form-label">Ukuran:</label>
+                <select id="ukuran" name="ukuran" class="form-select" required>
+                    <option value="S">S</option>
+                    <option value="M">M</option>
+                    <option value="L">L</option>
+                    <option value="XL">XL</option>
+                </select>
+            </div>
+            <div class="mb-3">
+                <label for="keterangan" class="form-label">Keterangan:</label>
+                <textarea id="keterangan" name="keterangan" class="form-control" required></textarea>
+            </div>
+            <div class="mb-3">
+                <label for="nama_admin" class="form-label">Admin:</label>
+                <input type="text" id="nama_admin" name="nama_admin" value="<?= htmlspecialchars($nama_admin) ?>" class="form-control" readonly>
+            </div>
+            <button type="submit" class="btn btn-primary">Tambah Produk</button>
         </form>
     </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
