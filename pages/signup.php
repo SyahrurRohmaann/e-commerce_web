@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Login - VielaDefis</title>
+    <title>Sign Up - VielaDefis</title>
     <!-- Fonts -->
     <link
       href="https://api.fontshare.com/v2/css?f[]=satoshi@300,400,500,700&display=swap"
@@ -17,7 +17,7 @@
     />
     <!-- Feather Icons -->
     <script src="https://unpkg.com/feather-icons"></script>
-    <link href="../styles/style.css" rel="stylesheet" />
+    <link href="../assets/styles/style.css" rel="stylesheet" />
     <style>
       body,
       html {
@@ -27,17 +27,6 @@
         display: flex;
         justify-content: center;
         align-items: center;
-      }
-      h1 {
-        margin-bottom: 10px;
-        font-family: Vollkorn, serif;
-        font-weight: 900;
-        font-size: 26px;
-      }
-      p {
-        margin-bottom: 20px;
-        color: #000;
-        font-family: Vollkorn, serif;
       }
 
       .custom-notification {
@@ -73,7 +62,7 @@
         border-radius: 4px;
         cursor: pointer;
       }
-      .footer-login {
+      .footer-signup {
         width: 100%;
         position: fixed;
         height: 30px;
@@ -82,29 +71,64 @@
         text-align: center;
         padding: 10px 0;
       }
+      .sign-up p{
+        display: inline;
+        margin-top: 30px;
+        margin-bottom: -90px;
+        margin-left: 205px
+      }
+      .home p{
+        display: inline-block;
+        margin-bottom: 550px;
+        align-items: normal;
+      }
     </style>
   </head>
   <body>
-    <div class="container-login">
+    <div class="container-signup">
+    <a class="home" href="index.php"><p><</p>Home</a>
       <div class="form-signup-login-section">
-        <form id="loginForm" method="post">
-          <h1>Login to your account</h1>
-          <p>it's great to see you again</p>
-          <label for="email">Email<br /></label>
+        <form method="post" id="registrasiForm">
+          <h1>Create an Account</h1>
+          <p>Let's create your account</p>
+          <label for="fname">Full Name<br /></label>
+          <input
+            type="text"
+            name="name"
+            id="name"
+            placeholder="Enter your full name"
+          /><br />
+          <label for="email">E-Mail<br /></label>
           <input
             type="email"
-            id="email"
             name="email"
-            placeholder="Enter your email address"
+            id="email"
+            placeholder="Enter your E-mail address"
           /><br />
-          <label for="password">Password<br /></label>
+          <label for="pass">Password<br /></label>
           <input
             type="password"
-            id="password"
             name="password"
-            placeholder="Enter your password"
+            id="password"
+            placeholder="Enter your Password"
+          /><br />
+          <label for="cpass">Confirm Password<br /></label>
+          <input
+            type="password"
+            name="cpassword"
+            id="cpassword"
+            placeholder="Enter your Password again"
           /><br /><br />
-          <button data-button="login">LOGIN</button>
+          <button class="login-register" data-button="register">CREATE AN ACCOUNT</button>
+          <div class="sign-up">
+          <p>or</p>
+          <button class="to-login" data-button="login" id="loginButton">LOGIN</button>
+          <script>
+            document.getElementById("loginButton").addEventListener("click", function(){
+              window.location.href = "login.php";
+            });
+          </script>
+          </div>
         </form>
       </div>
 
@@ -118,40 +142,41 @@
         document.getElementById("notification").style.display = "block";
         document.getElementById("overlay").style.display = "block";
       }
+
       function closeNotification() {
         document.getElementById("notification").style.display = "none";
         document.getElementById("overlay").style.display = "none";
       }
 
       document
-        .getElementById("loginForm")
+        .getElementById("registrasiForm")
         .addEventListener("submit", function (event) {
           event.preventDefault();
           var formData = new FormData(this);
           var xhr = new XMLHttpRequest();
-          xhr.open("POST", "../php/login.php", true);
+          xhr.open("POST", "../php/register.php", true);
           xhr.onload = function () {
             if (xhr.status === 200) {
               var response = xhr.responseText.trim();
               console.log("Response:", response);
 
               switch (response) {
-                case "Login berhasil":
-                  showNotification("Login berhasil!");
+                case "Registrasi berhasil":
+                  showNotification("Registrasi berhasil!");
                   setTimeout(() => {
-                    window.location.href = "index.html";
+                    window.location.href = "login.php";
                   }, 2000);
                   break;
-                case "Password salah":
-                  showNotification("Password anda salah!");
+                case "Password tidak sama":
+                  showNotification("Password tidak sama!");
                   break;
-                case "Email tidak terdaftar":
+                case "Email sudah terdaftar":
                   showNotification(
-                    "Email tidak terdaftar. Silakan registrasi terlebih dahulu."
+                    "Email sudah terdaftar. Silakan gunakan email lain."
                   );
                   break;
                 default:
-                  showNotification("Login gagal. Silakan coba lagi.");
+                  showNotification("Registrasi gagal. Silakan coba lagi.");
               }
             } else {
               showNotification("Terjadi kesalahan. Silakan coba lagi.");
@@ -166,5 +191,5 @@
       <button onclick="closeNotification()">OK</button>
     </div>
   </body>
-  <footer class="footer-login"></footer>
+  <footer class="footer-signup"></footer>
 </html>

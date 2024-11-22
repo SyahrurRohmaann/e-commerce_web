@@ -17,33 +17,13 @@ $offset = ($page - 1) * $limit;
 $sql = "
     SELECT t.id_transaksi, t.tanggal, t.total, 
            p.nama AS nama_produk, p.ukuran, p.id_kategori, dt.jumlah, dt.harga,
-           k.nama_kategori, a.nama_admin
+           k.nama_kategori, a.nama_user
     FROM transaksi t
     JOIN detail_transaksi dt ON t.id_transaksi = dt.id_transaksi
     JOIN Produk p ON dt.id_produk = p.id_produk
     JOIN Kategori k ON p.id_kategori = k.id_kategori
     JOIN admin a ON t.id_admin = a.id_admin
-    WHERE p.nama LIKE :search
-    ORDER BY t.id_transaksi DESC
-    LIMIT :limit OFFSET :offset";
-$stmt = $pdo->prepare($sql);
-$stmt->bindValue(':search', '%' . $search . '%', PDO::PARAM_STR);
-$stmt->bindValue(':limit', (int) $limit, PDO::PARAM_INT);
-$stmt->bindValue(':offset', (int) $offset, PDO::PARAM_INT);
-$stmt->execute();
-$transaksiList = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-$count_sql = "
-    SELECT COUNT(*)
-    FROM transaksi t
-    JOIN detail_transaksi dt ON t.id_transaksi = dt.id_transaksi
-    JOIN Produk p ON dt.id_produk = p.id_produk
-    WHERE p.nama LIKE :search";
-$count_stmt = $pdo->prepare($count_sql);
-$count_stmt->bindValue(':search', '%' . $search . '%', PDO::PARAM_STR);
-$count_stmt->execute();
-$total_transaksi = $count_stmt->fetchColumn();
-$total_pages = ceil($total_transaksi / $limit);
+")->fetchAll(PDO::FETCH_ASSOC);
 ?>
 
 <!DOCTYPE html>
@@ -89,7 +69,7 @@ $total_pages = ceil($total_transaksi / $limit);
                     <th>Jumlah</th>
                     <th>Harga</th>
                     <th>Total</th>
-                    <th>Admin</th>
+                    <th>Pembeli</th>
                 </tr>
             </thead>
             <tbody>
@@ -103,7 +83,7 @@ $total_pages = ceil($total_transaksi / $limit);
                     <td><?php echo $trans['jumlah']; ?></td>
                     <td><?php echo number_format($trans['harga'], 2); ?></td>
                     <td><?php echo number_format($trans['total'], 2); ?></td>
-                    <td><?php echo htmlspecialchars($trans['nama_admin']); ?></td>
+                    <td><?php echo htmlspecialchars($trans['nama_user']); ?></td>
                 </tr>
                 <?php endforeach; ?>
             </tbody>
