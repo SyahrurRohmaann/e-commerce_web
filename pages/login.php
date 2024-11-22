@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Sign Up - VielaDefis</title>
+    <title>Login - VielaDefis</title>
     <!-- Fonts -->
     <link
       href="https://api.fontshare.com/v2/css?f[]=satoshi@300,400,500,700&display=swap"
@@ -17,7 +17,7 @@
     />
     <!-- Feather Icons -->
     <script src="https://unpkg.com/feather-icons"></script>
-    <link href="../styles/style.css" rel="stylesheet" />
+    <link href="../assets/styles/style.css" rel="stylesheet" />
     <style>
       body,
       html {
@@ -27,6 +27,17 @@
         display: flex;
         justify-content: center;
         align-items: center;
+      }
+      .form-signup-login-section h1 {
+        margin-bottom: 10px;
+        font-family: Vollkorn, serif;
+        font-weight: 900;
+        font-size: 26px;
+      }
+      .form-signup-login-section p {
+        margin-bottom: 20px;
+        color: #000;
+        font-family: Vollkorn, serif;
       }
 
       .custom-notification {
@@ -62,7 +73,7 @@
         border-radius: 4px;
         cursor: pointer;
       }
-      .footer-signup {
+      .footer-login {
         width: 100%;
         position: fixed;
         height: 30px;
@@ -71,43 +82,49 @@
         text-align: center;
         padding: 10px 0;
       }
+      .sign-up p{
+        display: inline-block;
+        margin-top: 30px;
+        margin-bottom: -90px;
+        margin-left: 100px
+      }
+      .sign-up a{
+        color: blue;
+      }
+      .home p{
+        display: inline-block;
+        margin-bottom: 500px;
+        align-items: normal;
+      }
     </style>
   </head>
   <body>
-    <div class="container-signup">
+  <a class="home" href="index.php"><p><</p>Home</a>
+    <div class="container-login">
       <div class="form-signup-login-section">
-        <form method="post" id="registrasiForm">
-          <h1>Create an Account</h1>
-          <p>Let's create your account</p>
-          <label for="fname">Full Name<br /></label>
-          <input
-            type="text"
-            name="name"
-            id="name"
-            placeholder="Enter your full name"
-          /><br />
-          <label for="email">E-Mail<br /></label>
+        <form id="loginForm" method="post">
+          <h1>Login to your account</h1>
+          <p>it's great to see you again</p>
+          <label for="email">Email<br /></label>
           <input
             type="email"
-            name="email"
             id="email"
-            placeholder="Enter your E-mail address"
+            name="email"
+            placeholder="Enter your email address"
           /><br />
-          <label for="pass">Password<br /></label>
+          <label for="password">Password<br /></label>
           <input
             type="password"
-            name="password"
             id="password"
-            placeholder="Enter your Password"
-          /><br />
-          <label for="cpass">Confirm Password<br /></label>
-          <input
-            type="password"
-            name="cpassword"
-            id="cpassword"
-            placeholder="Enter your Password again"
+            name="password"
+            placeholder="Enter your password"
           /><br /><br />
-          <button data-button="register">CREATE AN ACCOUNT</button>
+          <button class="login-register" data-button="login">LOGIN</button>
+          <div class="sign-up">
+            <p>already have an account?
+              <a href="signup.php">Sign Up</a>
+            </p>
+          </div>
         </form>
       </div>
 
@@ -121,48 +138,47 @@
         document.getElementById("notification").style.display = "block";
         document.getElementById("overlay").style.display = "block";
       }
-
       function closeNotification() {
         document.getElementById("notification").style.display = "none";
         document.getElementById("overlay").style.display = "none";
       }
 
       document
-        .getElementById("registrasiForm")
+        .getElementById("loginForm")
         .addEventListener("submit", function (event) {
           event.preventDefault();
           var formData = new FormData(this);
-          var xhr = new XMLHttpRequest();
-          xhr.open("POST", "../php/register.php", true);
-          xhr.onload = function () {
-            if (xhr.status === 200) {
-              var response = xhr.responseText.trim();
-              console.log("Response:", response);
-
-              switch (response) {
-                case "Registrasi berhasil":
-                  showNotification("Registrasi berhasil!");
-                  setTimeout(() => {
-                    window.location.href = "login.html";
-                  }, 2000);
-                  break;
-                case "Password tidak sama":
-                  showNotification("Password tidak sama!");
-                  break;
-                case "Email sudah terdaftar":
-                  showNotification(
-                    "Email sudah terdaftar. Silakan gunakan email lain."
-                  );
-                  break;
-                default:
-                  showNotification("Registrasi gagal. Silakan coba lagi.");
-              }
-            } else {
-              showNotification("Terjadi kesalahan. Silakan coba lagi.");
+          
+          fetch('../php/login.php', {
+            method: 'POST',
+            body: formData
+          })
+          .then(response => {
+            if (!response.ok) {
+              throw new Error('Network response was not ok');
             }
-          };
-          xhr.send(formData);
+            return response.json();
+          })
+          .then(data => {
+            console.log('Response:', data);
+            
+            if (data.status === 'success') {
+              sessionStorage.setItem('user', JSON.stringify(data.user));
+              showNotification(data.message || 'Login berhasil!');
+              setTimeout(() => {
+                window.location.href = 'index.php';
+              }, 2000);
+            } else {
+              showNotification(data.message || 'Login gagal');
+            }
+          })
+          .catch(error => {
+            console.error('Error:', error);
+            showNotification('Terjadi kesalahan. Silakan coba lagi.');
+          });
         });
+
+      document.querySelector('.custom-notification button').addEventListener('click', closeNotification);
     </script>
     <div class="notification-overlay" id="overlay"></div>
     <div class="custom-notification" id="notification">
@@ -170,5 +186,5 @@
       <button onclick="closeNotification()">OK</button>
     </div>
   </body>
-  <footer class="footer-signup"></footer>
+  <footer class="footer-login"></footer>
 </html>

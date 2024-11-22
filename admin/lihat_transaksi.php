@@ -12,12 +12,12 @@ require 'db.php';
 $transaksiList = $pdo->query("
     SELECT t.id_transaksi, t.tanggal, t.total, 
            p.nama AS nama_produk, p.ukuran, p.id_kategori, dt.jumlah, dt.harga,
-           k.nama_kategori, a.nama_admin
+           k.nama_kategori, a.nama_user
     FROM transaksi t
     JOIN detail_transaksi dt ON t.id_transaksi = dt.id_transaksi
     JOIN Produk p ON dt.id_produk = p.id_produk
     JOIN Kategori k ON p.id_kategori = k.id_kategori
-    JOIN admin a ON t.id_admin = a.id_admin
+    JOIN pengguna a ON t.id_user = a.id_user
 ")->fetchAll(PDO::FETCH_ASSOC);
 ?>
 
@@ -60,7 +60,7 @@ $transaksiList = $pdo->query("
                     <th>Jumlah</th>
                     <th>Harga</th>
                     <th>Total</th>
-                    <th>Admin</th>
+                    <th>Pembeli</th>
                 </tr>
             </thead>
             <tbody>
@@ -74,7 +74,7 @@ $transaksiList = $pdo->query("
                     <td><?php echo $trans['jumlah']; ?></td>
                     <td><?php echo number_format($trans['harga'], 2); ?></td>
                     <td><?php echo number_format($trans['total'], 2); ?></td>
-                    <td><?php echo htmlspecialchars($trans['nama_admin']); ?></td>
+                    <td><?php echo htmlspecialchars($trans['nama_user']); ?></td>
                 </tr>
                 <?php endforeach; ?>
             </tbody>
