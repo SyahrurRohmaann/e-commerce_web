@@ -1,5 +1,5 @@
 <?php
-session_start();
+  session_start();
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -31,54 +31,70 @@ session_start();
         </p>
     </div>
     
+
     <div class="header-top">
-        <a href="index.php" class="header-logo">
-            <img src="../assets/image/logo.png" alt="logo" width="170" height="170" />
-        </a>
-        <div class="header-menu">
-            <!-- Menu items -->
-            <ul class="desktop-menu-category-list">
-                <li class="menu-category">
-                    <a href="shop.php" class="menu-title">Shop</a>
-                    <ul class="dropdown-list">
-                        <li class="dropdown-item">
-                            <a href="t-shirt.php">T-Shirt</a>
-                        </li>
-                        <li class="dropdown-item">
-                            <a href="#">Hoodie</a>
-                        </li>
-                    </ul>
-                </li>
-                <li class="menu-category">
-                    <a href="#" class="menu-title">New Arrival</a>
-                </li>
-                <li class="menu-category">
-                    <a href="#" class="menu-title">On Sale</a>
-                </li>
-                <li class="menu-category">
-                    <a href="#" class="menu-title">Brands</a>
-                </li>
-            </ul>
+    <a href="index.php" class="header-logo">
+        <img src="../assets/image/logo.png" alt="logo" width="170" height="170" />
+    </a>
+    <div class="header-menu">
+        <!-- Menu items -->
+        <ul class="desktop-menu-category-list">
+    <li class="menu-category">
+        <a href="shop.php" class="menu-title" id="shopMenu">Shop</a>
+        <ul class="dropdown-list" id="categoryDropdown"></ul>
+    </li>
+    <li class="menu-category">
+        <a href="index.php#new-arrival-section" class="menu-title">New Arrival</a>
+    </li>
+    <li class="menu-category">
+    <a href="index.php#top-selling-section" class="menu-title">Top Selling</a>
+    </li>
+    <li class="menu-category">
+        <a href="#" class="menu-title">Brands</a>
+    </li>
+</ul>
 
-            <div class="header-search-container">
-                <input type="search" name="search" class="search-field" placeholder="Search for products.." />
-            </div>
 
-            <div class="header-user-actions">
-                <button class="action-btn" id="cartButton">
-                    <i data-feather="shopping-cart"></i>
-                    <span class="count" id="cartCount">0</span>
-                </button>
+        <div class="header-search-container">
+            <input type="search" name="search" class="search-field" placeholder="Search for products.." />
+        </div>
 
-                <button id="userButton" class="action-btn">
-                    <i data-feather="user"></i>
-                    <span class="userName" id="userStatus" style="color: #fff;">
-                        <?= isset($_SESSION['user_name']) ? $_SESSION['user_name'] : '' ?>
-                    </span>
-                </button>
-            </div>
+        <div class="header-user-actions">
+            <button class="action-btn" id="cartButton">
+                <i data-feather="shopping-cart"></i>
+                <span class="count" id="cartCount">0</span>
+            </button>
+
+            <button id="userButton" class="action-btn">
+                <i data-feather="user"></i>
+                <span class="userName" id="userStatus" style="color: #fff;">
+                    <?= isset($_SESSION['user_name']) ? $_SESSION['user_name'] : '' ?>
+                </span>
+            </button>
         </div>
     </div>
+</div>
+
+<script>
+document.getElementById('shopMenu').addEventListener('mouseover', function() {
+    fetch('../php/get_categories.php')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const dropdown = document.getElementById('categoryDropdown');
+                dropdown.innerHTML = data.categories.map(category => `
+                    <li class="dropdown-item">
+                        <a href="shop.php?category=${category.id_kategori}">${category.nama_kategori}</a>
+                    </li>
+                `).join('');
+            } else {
+                console.error('Failed to load categories');
+            }
+        })
+        .catch(error => console.error('Error:', error));
+});
+</script>
+
 
     <div class="cart-overlay" id="cartOverlay" onclick="closeCart()"></div>
     <div id="cartSidebar" class="cart-sidebar">
@@ -197,13 +213,28 @@ session_start();
     }
 
     function generateCartItemHTML(item) {
+    let gambar = item.gambar;
+    try {
+        // Coba parse gambar sebagai JSON array
+        const gambarArray = JSON.parse(gambar);
+        if (Array.isArray(gambarArray) && gambarArray.length > 0) {
+            gambar = gambarArray[0]; // Ambil gambar pertama dari array
+        }
+    } catch (e) {
+        // Jika parsing gagal, gambar tetap sebagai string tunggal
+    }
+
+    // Tambahkan validasi untuk ukuran produk
+    const size = item.ukuran ? item.ukuran : "Default Size";
+
     return `
         <div class="cart-item" data-id="${item.id_keranjang}">
-            <img src="../uploads/${item.gambar}" alt="${item.nama}" 
-                onerror="this.src='../assets/image/product-1.jpg'">
+            <img src="../uploads/${gambar}" alt="${item.nama}" 
+                onerror="this.src='../assets/image/logo.png'">
             <div class="item-details">
                 <h3>${item.nama}</h3>
                 <p>Rp ${formatPrice(item.harga)}</p>
+                <p>Size: ${size}</p> <!-- Tambahkan ukuran produk di sini -->
                 <p>Stock: ${item.stock}</p>
                 <div class="quantity-controls">
                     <button class="quantity-decrease" data-id="${item.id_keranjang}" data-quantity="${item.jumlah - 1}" 
@@ -217,6 +248,7 @@ session_start();
         </div>
     `;
 }
+
 
 
     function displayCartItems(items) {
@@ -410,10 +442,40 @@ session_start();
             notification.remove();
         }, 3000);
     }
+
+    $('.increase-btn').on('click', function () {
+    const itemId = $(this).data('item-id');
+
+    $.post('cart-api.php', { item_id: itemId, action: 'increase' }, function (response) {
+        if (response.error) {
+            alert(response.error);
+        } else {
+            // Update tampilan keranjang atau stok
+            updateCartView();
+        }
+    }, 'json');
+});
+
+$('.decrease-btn').on('click', function () {
+    const itemId = $(this).data('item-id');
+
+    $.post('cart-api.php', { item_id: itemId, action: 'decrease' }, function (response) {
+        if (response.error) {
+            alert(response.error);
+        } else {
+            // Update tampilan keranjang atau stok
+            updateCartView();
+        }
+    }, 'json');
+});
+
     </script>
 
     <style>
     /* Style untuk notifikasi */
+    html {
+         scroll-behavior: smooth; 
+        }
     .notification {
         position: fixed;
         top: 20px;

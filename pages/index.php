@@ -1,4 +1,5 @@
   <?php
+
 $pageTitle = 'Home';
 include '../templates/header.php';
 require_once '../php/config.php';
@@ -183,72 +184,126 @@ const ImageSlider = new Slider(document.querySelector(".image-slider"));
 
     </script>
 
-    <main>
-      <div class="new-arrival">
-        <h2>NEW ARRIVAL</h2>
-        <div class="products">
-          <?php foreach($newProducts as $product): ?>
-                <div class="product">
-                    <img src="../uploads/<?= htmlspecialchars($product['gambar']) ?>" 
+<!-- Main Content -->
+<!-- Main Content -->
+<main>
+
+<!-- New Arrival Section -->
+<div id="new-arrival-section" class="new-arrival">
+    <h2>NEW ARRIVAL</h2>
+    <div class="products">
+        <?php
+        $displayedNames = [];
+        $uniqueNewProducts = [];
+        
+        // Loop untuk mendapatkan produk unik sebanyak 4
+        foreach ($newProducts as $product) {
+            if (!in_array($product['nama'], $displayedNames)) {
+                $uniqueNewProducts[] = $product;
+                $displayedNames[] = $product['nama'];
+            }
+            // Hentikan jika sudah mendapatkan 4 produk
+            if (count($uniqueNewProducts) >= 4) {
+                break;
+            }
+        }
+
+        // Jika produk unik kurang dari 4, tambahkan produk lain tanpa memeriksa duplikat
+        if (count($uniqueNewProducts) < 4) {
+            $additionalProducts = array_diff_key($newProducts, array_flip(array_keys($displayedNames)));
+            foreach ($additionalProducts as $product) {
+                if (count($uniqueNewProducts) >= 4) {
+                    break;
+                }
+                $uniqueNewProducts[] = $product;
+            }
+        }
+
+        // Tampilkan produk unik
+        foreach ($uniqueNewProducts as $product):
+            $gambarArray = json_decode($product['gambar'], true);
+            $gambarUtama = !empty($gambarArray) && is_array($gambarArray) ? $gambarArray[0] : $product['gambar'];
+            $gambarUtama = $gambarUtama ?: '../assets/image/product-1.jpg';
+        ?>
+            <div class="product">
+            <a href="product_detail.php?id_produk=<?= $product['id_produk'] ?>">
+
+                    <img src="../uploads/<?= htmlspecialchars($gambarUtama) ?>" 
                          alt="<?= htmlspecialchars($product['nama']) ?>" 
                          onerror="this.src='../assets/image/product-1.jpg'"/>
-                    <p class="nama-product"><?= htmlspecialchars($product['nama']) ?></p>
-                    <p>IDR <?= number_format($product['harga'], 0, ',', '.') ?></p>
-                    <?php if($product['stock'] > 0): ?>
-                        <p class="stock">Stock: <?= $product['stock'] ?></p>
-                    <?php else: ?>
-                        <p class="out-of-stock">Out of Stock</p>
-                    <?php endif; ?>
-                </div>
-            <?php endforeach; ?>
-        </div>
-        </br><div class="view-all">
-          <button class="new-arrival-btn">View All</button>
-        </div>
-      </div>
+                </a>
+                <p class="nama-product"><?= htmlspecialchars($product['nama']) ?></p>
+                <p>IDR <?= number_format($product['harga'], 0, ',', '.') ?></p>
+                <?php if ($product['stock'] > 0): ?>
+                    <p class="stock">Stock: <?= $product['stock'] ?></p>
+                <?php else: ?>
+                    <p class="out-of-stock">Out of Stock</p>
+                <?php endif; ?>
+            </div>
+        <?php endforeach; ?>
+    </div>
+    <div class="view-all"> 
+        <button style="cursor:pointer;" class="top-selling-btn" onclick="window.location.href='shop.php';">View All</button>
+    </div>
+</div>
 
-      <div class="top-selling">
+
+
+    <!-- Top Selling Section -->
+    <div id="top-selling-section" class="top-selling">
         <h2>TOP SELLING</h2>
         <div class="products">
-          <?php
-        try {
-            // Query untuk mengambil produk terlaris berdasarkan jumlah transaksi
-            $stmt = $db->prepare("
-                SELECT p.*, k.nama_kategori, COUNT(dt.id_produk) as total_sold 
-                FROM produk p 
-                JOIN kategori k ON p.id_kategori = k.id_kategori
-                LEFT JOIN detail_transaksi dt ON p.id_produk = dt.id_produk 
-                GROUP BY p.id_produk 
-                ORDER BY total_sold DESC, p.id_produk DESC
-                LIMIT 4
-            ");
-            $stmt->execute();
-            $topProducts = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            <?php
+            try {
+                $displayedNames = []; // Reset array untuk melacak nama produk di Top Selling
+                $stmt = $db->prepare("
+                    SELECT p.*, k.nama_kategori, COUNT(dt.id_produk) as total_sold 
+                    FROM produk p 
+                    JOIN kategori k ON p.id_kategori = k.id_kategori
+                    LEFT JOIN detail_transaksi dt ON p.id_produk = dt.id_produk 
+                    GROUP BY p.id_produk 
+                    ORDER BY total_sold DESC, p.id_produk DESC
+                    LIMIT 4
+                ");
+                $stmt->execute();
+                $topProducts = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-            foreach($topProducts as $product): ?>
-                <div class="product">
-                    <img src="../uploads/<?= htmlspecialchars($product['gambar']) ?>" 
-                         alt="<?= htmlspecialchars($product['nama']) ?>" 
-                         onerror="this.src='../assets/image/product-1.jpg'"/>
-                    <p class="nama-product"><?= htmlspecialchars($product['nama']) ?></p>
-                    <p>IDR <?= number_format($product['harga'], 0, ',', '.') ?></p>
-                    <?php if($product['stock'] > 0): ?>
-                        <p class="stock"><?= $product['stock'] ?></p>
-                    <?php else: ?>
-                        <p class="out-of-stock">Out of Stock</p>
-                    <?php endif; ?>
-                </div>
+                foreach ($topProducts as $product):
+                    if (in_array($product['nama'], $displayedNames)) {
+                        continue; // Skip produk jika nama sudah ada
+                    }
+                    $displayedNames[] = $product['nama']; // Tambahkan nama ke array
+                    $gambarArray = json_decode($product['gambar'], true);
+                    $gambarUtama = !empty($gambarArray) && is_array($gambarArray) ? $gambarArray[0] : $product['gambar'];
+                    $gambarUtama = $gambarUtama ?: '../assets/image/product-1.jpg';
+            ?>
+                    <div class="product">
+                    <a href="product_detail.php?id_produk=<?= $product['id_produk'] ?>">
+                            <img src="../uploads/<?= htmlspecialchars($gambarUtama) ?>" 
+                                 alt="<?= htmlspecialchars($product['nama']) ?>" 
+                                 onerror="this.src='../assets/image/product-1.jpg'"/>
+                        </a>
+                        <p class="nama-product"><?= htmlspecialchars($product['nama']) ?></p>
+                        <p>IDR <?= number_format($product['harga'], 0, ',', '.') ?></p>
+                        <?php if ($product['stock'] > 0): ?>
+                            <p class="stock"><?= $product['stock'] ?></p>
+                        <?php else: ?>
+                            <p class="out-of-stock">Out of Stock</p>
+                        <?php endif; ?>
+                    </div>
             <?php endforeach;
-            } catch(PDOException $e) {
-              echo "Error: " . $e->getMessage();
-          }
-          ?>
+            } catch (PDOException $e) {
+                echo "Error: " . $e->getMessage();
+            }
+            ?>
         </div>
-        </br><div class="view-all">
-          <button class="top-selling-btn">View All</button>
-        </div>
-      </div>
-    </main>
+        <div class="view-all"> 
+    <button style="cursor:pointer;" class="top-selling-btn" onclick="window.location.href='shop.php';">View All</button>
+</div>
+
+    </div>
+</main>
+
 
   <?php 
 

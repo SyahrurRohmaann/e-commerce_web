@@ -172,9 +172,21 @@ function displayCartItems(items) {
         return;
     }
     
-    container.innerHTML = items.map(item => `
+    container.innerHTML = items.map(item => {
+        let gambar = item.gambar;
+        try {
+            // Coba parse gambar sebagai JSON array
+            const gambarArray = JSON.parse(gambar);
+            if (Array.isArray(gambarArray) && gambarArray.length > 0) {
+                gambar = gambarArray[0]; // Ambil gambar pertama dari array
+            }
+        } catch (e) {
+            // Jika parsing gagal, gambar tetap sebagai string tunggal
+        }
+        
+        return `
         <div class="cart-item">
-            <img src="../uploads/${item.gambar}" alt="${item.nama}" onerror="this.src='../assets/image/product-1.jpg'">
+            <img src="../uploads/${gambar}" alt="${item.nama}" onerror="this.src='../assets/image/product-1.jpg'">
             <div class="item-details">
                 <h3>${item.nama}</h3>
                 <p>Rp ${parseInt(item.harga).toLocaleString('id-ID')}</p>
@@ -186,7 +198,8 @@ function displayCartItems(items) {
             </div>
             <button class="remove-btn" onclick="removeItem(${item.id_keranjang})">×</button>
         </div>
-    `).join('');
+    `;
+    }).join('');
 }
 
 // Fungsi untuk update total

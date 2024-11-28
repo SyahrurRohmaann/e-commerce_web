@@ -4,6 +4,12 @@ require 'config.php';
 
 header('Content-Type: application/json');
 
+
+
+
+
+
+
 class Cart {
     private $db;
 
@@ -11,10 +17,113 @@ class Cart {
         $this->db = new config();
     }
 
+    public function addToCart($productId, $quantity, $size) {
+        try {
+            // Validasi input
+            if (empty($productId) || empty($size) || $quantity <= 0) {
+                return [
+                    'success' => false,
+                    'message' => 'Invalid product ID, size, or quantity.'
+                ];
+            }
+
+            // Validasi user login
+            if (!isset($_SESSION['user_id'])) {
+                return [
+                    'success' => false,
+                    'message' => 'User not logged in.'
+                ];
+            }
+
+            $userId = $_SESSION['user_id'];
+
+            // Validasi stok
+            $stmt = $this->db->prepare("
+                SELECT stock 
+                FROM produk 
+                WHERE id_produk = :product_id
+            ");
+            $stmt->bindParam(':product_id', $productId);
+            $stmt->execute();
+            $product = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if (!$product) {
+                return [
+                    'success' => false,
+                    'message' => 'Produk tidak ditemukan.'
+                ];
+            }
+
+            if ($quantity > $product['stock']) {
+                return [
+                    'success' => false,
+                    'message' => 'Quantity exceeds available stock.'
+                ];
+            }
+
+            // Cek apakah produk sudah ada di keranjang
+            $stmt = $this->db->prepare("
+                SELECT id_keranjang, jumlah 
+                FROM keranjang 
+                WHERE id_user = :user_id 
+                  AND id_produk = :product_id 
+                  AND ukuran = :size
+            ");
+            $stmt->bindParam(':user_id', $userId);
+            $stmt->bindParam(':product_id', $productId);
+            $stmt->bindParam(':size', $size);
+            $stmt->execute();
+            $cartItem = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if ($cartItem) {
+                // Update jumlah produk
+                $newQuantity = $cartItem['jumlah'] + $quantity;
+
+                if ($newQuantity > $product['stock']) {
+                    return [
+                        'success' => false,
+                        'message' => 'Quantity exceeds available stock.'
+                    ];
+                }
+
+                $stmt = $this->db->prepare("
+                    UPDATE keranjang 
+                    SET jumlah = :quantity 
+                    WHERE id_keranjang = :cart_id
+                ");
+                $stmt->bindParam(':quantity', $newQuantity, PDO::PARAM_INT);
+                $stmt->bindParam(':cart_id', $cartItem['id_keranjang']);
+            } else {
+                // Tambahkan produk baru ke keranjang
+                $stmt = $this->db->prepare("
+                    INSERT INTO keranjang (id_user, id_produk, jumlah, ukuran)
+                    VALUES (:user_id, :product_id, :quantity, :size)
+                ");
+                $stmt->bindParam(':user_id', $userId);
+                $stmt->bindParam(':product_id', $productId);
+                $stmt->bindParam(':quantity', $quantity, PDO::PARAM_INT);
+                $stmt->bindParam(':size', $size);
+            }
+
+            $stmt->execute();
+
+            return [
+                'success' => true,
+                'message' => 'Product added to cart successfully.'
+            ];
+        } catch (Exception $e) {
+            return [
+                'success' => false,
+                'message' => $e->getMessage()
+            ];
+        }
+    }
+
+
     public function getCartItems() {
         try {
             $stmt = $this->db->prepare("
-                SELECT k.*, p.nama, p.harga, p.gambar, p.stock 
+                SELECT k.*, p.nama, p.harga, p.gambar, p.stock, k.ukuran 
                 FROM keranjang k
                 JOIN produk p ON k.id_produk = p.id_produk
                 WHERE k.id_user = :user_id
@@ -33,44 +142,58 @@ class Cart {
             ];
         }
     }
+    
 
-    public function updateQuantity($cartId, $quantity) {
-        try {
-            // Validasi stok
-            $stmt = $this->db->prepare("
-                SELECT p.stock 
-                FROM keranjang k
-                JOIN produk p ON k.id_produk = p.id_produk
-                WHERE k.id_keranjang = :cart_id
-            ");
-            $stmt->bindParam(':cart_id', $cartId);
-            $stmt->execute();
-            $product = $stmt->fetch(PDO::FETCH_ASSOC);
+public function updateQuantity($cartId, $quantity) {
+    try {
+        // Ambil stok produk yang ada di keranjang
+        $stmt = $this->db->prepare("
+            SELECT p.stock 
+            FROM keranjang k
+            JOIN produk p ON k.id_produk = p.id_produk
+            WHERE k.id_keranjang = :cart_id
+        ");
+        $stmt->bindParam(':cart_id', $cartId);
+        $stmt->execute();
+        $product = $stmt->fetch(PDO::FETCH_ASSOC);
 
-            if ($quantity > $product['stock']) {
-                return [
-                    'success' => false,
-                    'message' => 'Quantity exceeds available stock'
-                ];
-            }
-
-            $stmt = $this->db->prepare("
-                UPDATE keranjang 
-                SET jumlah = :quantity 
-                WHERE id_keranjang = :cart_id
-            ");
-            $stmt->bindParam(':quantity', $quantity);
-            $stmt->bindParam(':cart_id', $cartId);
-            $stmt->execute();
-            
-            return ['success' => true];
-        } catch(Exception $e) {
+        // Jika produk tidak ditemukan di keranjang
+        if (!$product) {
             return [
                 'success' => false,
-                'message' => $e->getMessage()
+                'message' => 'Product not found in cart'
             ];
         }
+
+        // Pastikan quantity yang diminta tidak melebihi stok
+        if ($quantity < 1 || $quantity > $product['stock']) {
+            return [
+                'success' => false,
+                'message' => 'Quantity is invalid or exceeds stock'
+            ];
+        }
+
+        // Update jumlah di keranjang
+        $stmt = $this->db->prepare("
+            UPDATE keranjang 
+            SET jumlah = :quantity 
+            WHERE id_keranjang = :cart_id
+        ");
+        $stmt->bindParam(':quantity', $quantity, PDO::PARAM_INT);
+        $stmt->bindParam(':cart_id', $cartId, PDO::PARAM_INT);
+        $stmt->execute();
+        
+        return ['success' => true];
+    } catch (Exception $e) {
+        // Tangani error dan kirim pesan yang sesuai
+        return [
+            'success' => false,
+            'message' => $e->getMessage()
+        ];
     }
+}
+
+
 
     public function removeItem($cartId) {
         try {
@@ -179,28 +302,83 @@ class Cart {
 // Handle requests
 $cart = new Cart();
 
-if ($_SERVER['REQUEST_METHOD'] === 'GET') {
-    if (isset($_GET['action']) && $_GET['action'] === 'get_cart_items') {
-        echo json_encode($cart->getCartItems());
-    }
-} else if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $data = json_decode(file_get_contents('php://input'), true);
-    
-    switch ($data['action']) {
-        case 'update_quantity':
-            echo json_encode($cart->updateQuantity($data['cart_id'], $data['quantity']));
-            break;
-        case 'remove_item':
-            echo json_encode($cart->removeItem($data['cart_id']));
-            break;
-        case 'checkout':
-            echo json_encode($cart->checkout());
-            break;
-        default:
+try {
+    if ($_SERVER['REQUEST_METHOD'] === 'GET') {
+        if (isset($_GET['action']) && $_GET['action'] === 'get_cart_items') {
+            echo json_encode($cart->getCartItems());
+        }
+    } else if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+        $data = json_decode(file_get_contents('php://input'), true);
+
+        if (!isset($data['action'])) {
+            http_response_code(400);
             echo json_encode([
                 'success' => false,
-                'message' => 'Invalid action'
+                'message' => 'Action is required.'
             ]);
+            exit;
+        }
+
+        switch ($data['action']) {
+            case 'add_to_cart':
+                if (!isset($data['product_id'], $data['quantity'], $data['size'])) {
+                    http_response_code(400);
+                    echo json_encode([
+                        'success' => false,
+                        'message' => 'Product ID, quantity, and size are required.'
+                    ]);
+                    exit;
+                }
+                echo json_encode($cart->addToCart($data['product_id'], $data['quantity'], $data['size']));
+                break;
+
+            case 'update_quantity':
+                if (!isset($data['cart_id'], $data['quantity'])) {
+                    http_response_code(400);
+                    echo json_encode([
+                        'success' => false,
+                        'message' => 'Cart ID and quantity are required.'
+                    ]);
+                    exit;
+                }
+                echo json_encode($cart->updateQuantity($data['cart_id'], $data['quantity']));
+                break;
+
+            case 'remove_item':
+                if (!isset($data['cart_id'])) {
+                    http_response_code(400);
+                    echo json_encode([
+                        'success' => false,
+                        'message' => 'Cart ID is required.'
+                    ]);
+                    exit;
+                }
+                echo json_encode($cart->removeItem($data['cart_id']));
+                break;
+
+            case 'checkout':
+                echo json_encode($cart->checkout());
+                break;
+
+            default:
+                http_response_code(400);
+                echo json_encode([
+                    'success' => false,
+                    'message' => 'Invalid action.'
+                ]);
+        }
+    } else {
+        http_response_code(405);
+        echo json_encode([
+            'success' => false,
+            'message' => 'Method not allowed.'
+        ]);
     }
+} catch (Exception $e) {
+    http_response_code(500);
+    echo json_encode([
+        'success' => false,
+        'message' => 'Server error: ' . $e->getMessage()
+    ]);
 }
 ?>

@@ -11,19 +11,53 @@ class Product {
         $this->db = new config();
     }
 
-    // Fungsi untuk mendapatkan semua produk
-    public function getProducts() {
+    // Fungsi untuk mendapatkan produk dengan paginasi dan filter kategori
+    public function getProducts($page = 1, $limit = 8, $category = null) {
         try {
-            $stmt = $this->db->prepare("
-                SELECT p.*, k.nama_kategori 
-                FROM produk p 
-                JOIN kategori k ON p.id_kategori = k.id_kategori
-                ORDER BY p.id_produk DESC
-            ");
+            $offset = ($page - 1) * $limit;
+            
+            if ($category) {
+                // Jika kategori ditentukan, ambil produk berdasarkan kategori
+                $stmt = $this->db->prepare("
+                    SELECT p.*, k.nama_kategori 
+                    FROM produk p 
+                    JOIN kategori k ON p.id_kategori = k.id_kategori
+                    WHERE p.id_kategori = :category
+                    ORDER BY p.id_produk DESC
+                    LIMIT :limit OFFSET :offset
+                ");
+                $stmt->bindParam(':category', $category, PDO::PARAM_INT);
+            } else {
+                // Jika tidak ada kategori, ambil semua produk
+                $stmt = $this->db->prepare("
+                    SELECT p.*, k.nama_kategori 
+                    FROM produk p 
+                    JOIN kategori k ON p.id_kategori = k.id_kategori
+                    ORDER BY p.id_produk DESC
+                    LIMIT :limit OFFSET :offset
+                ");
+            }
+            
+            $stmt->bindParam(':limit', $limit, PDO::PARAM_INT);
+            $stmt->bindParam(':offset', $offset, PDO::PARAM_INT);
             $stmt->execute();
+            $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            // Dapatkan total produk untuk menghitung total halaman
+            $totalStmt = $this->db->prepare("SELECT COUNT(*) as total FROM produk" . ($category ? " WHERE id_kategori = :category" : ""));
+            if ($category) {
+                $totalStmt->bindParam(':category', $category, PDO::PARAM_INT);
+            }
+            $totalStmt->execute();
+            $totalProducts = $totalStmt->fetch(PDO::FETCH_ASSOC)['total'];
+            $totalPages = ceil($totalProducts / $limit);
+
             return [
                 'success' => true,
-                'data' => $stmt->fetchAll(PDO::FETCH_ASSOC)
+                'data' => [
+                    'products' => $products,
+                    'totalPages' => $totalPages,
+                ]
             ];
         } catch(Exception $e) {
             return [
@@ -134,19 +168,19 @@ class Product {
             
             $result = $stmt->fetch(PDO::FETCH_ASSOC);
         
-        return [
-            'success' => true,
-            'count' => (int)$result['total_items']
-        ];
+            return [
+                'success' => true,
+                'count' => (int)$result['total_items']
+            ];
 
-    } catch(Exception $e) {
-        return [
-            'success' => false,
-            'error' => $e->getMessage(),
-            'count' => 0
-        ];
+        } catch(Exception $e) {
+            return [
+                'success' => false,
+                'error' => $e->getMessage(),
+                'count' => 0
+            ];
+        }
     }
-}
 }
 
 // Handle requests
@@ -174,7 +208,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (isset($_GET['action'])) {
         switch ($_GET['action']) {
             case 'get_products':
-                echo json_encode($product->getProducts());
+                $page = $_GET['page'] ?? 1;
+                $limit = $_GET['limit'] ?? 9;
+                $category = $_GET['category'] ?? null;
+                echo json_encode($product->getProducts($page, $limit, $category));
                 break;
             case 'get_cart_count':
                 $userId = $_GET['user_id'] ?? $_SESSION['user_id'] ?? null;
@@ -188,4 +225,4 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 }
-?> 
+?>

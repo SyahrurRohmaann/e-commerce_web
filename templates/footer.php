@@ -9,7 +9,7 @@
         </div>
         <div class="footer-right">
             <p>Contact Us</p>
-            <a href="#"><i data-feather="instagram"></i></a>
+            <a href="https://www.instagram.com/viela.defis/?locale=it_IT"><i data-feather="instagram"></i></a>
             <a href="#"><i data-feather="twitter"></i></a>
         </div>
         <script>
