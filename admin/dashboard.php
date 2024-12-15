@@ -113,7 +113,6 @@ $totalKategori = $pdo->query("SELECT COUNT(*) FROM Kategori")->fetchColumn();
                         'rgba(255, 159, 64, 1)'
                     ];
 
-                    // Mengelompokkan data berdasarkan tanggal
                     const groupedData = data.reduce((acc, item) => {
                         const date = item.tanggal;
                         if (!acc[date]) {
@@ -150,9 +149,9 @@ $totalKategori = $pdo->query("SELECT COUNT(*) FROM Kategori")->fetchColumn();
                             plugins: {
                                 legend: {
                                     labels: {
-                                        color: 'rgb(0, 0, 0)', // Warna label legend lebih kontras
+                                        color: 'rgb(0, 0, 0)',
                                         font: {
-                                            size: 14 // Ukuran font lebih besar
+                                            size: 14
                                         }
                                     }
                                 }

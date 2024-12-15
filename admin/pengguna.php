@@ -17,18 +17,6 @@ if (isset($_POST['edit'])) {
     }
 }
 
-// Menangani penghapusan pengguna
-if (isset($_POST['delete'])) {
-    $id_user = $_POST['id_user'];
-    $sql = "DELETE FROM pengguna WHERE id_user = ?";
-    $stmt = $pdo->prepare($sql);
-    if ($stmt->execute([$id_user])) {
-        $message = "Pengguna berhasil dihapus";
-    } else {
-        $message = "Error: " . $stmt->errorInfo()[2];
-    }
-}
-
 // Fungsi Pencarian dan Pagination
 $search = isset($_GET['search']) ? $_GET['search'] : '';
 $limit = 10;
@@ -171,7 +159,6 @@ $total_pages = ceil($total_pengguna / $limit);
                         </form>
                         <form method="post" action="pengguna.php" style="display:inline-block;">
                             <input type="hidden" name="id_user" value="<?= $pengguna['id_user'] ?>">
-                            <button type="submit" name="delete" class="btn btn-danger btn-sm" onclick="return confirm('Yakin ingin menghapus pengguna ini?')">Hapus</button>
                         </form>
                     </td>
                 </tr>

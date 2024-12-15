@@ -11,6 +11,9 @@ require 'db.php';
 // Mengambil data produk dari database
 $produkList = $pdo->query("SELECT * FROM Produk")->fetchAll(PDO::FETCH_ASSOC);
 
+// Mengambil data pengguna dari database
+$penggunaList = $pdo->query("SELECT * FROM pengguna")->fetchAll(PDO::FETCH_ASSOC);
+
 // Mengelompokkan produk berdasarkan nama
 $produkGroupedByName = [];
 foreach ($produkList as $produk) {
@@ -45,7 +48,18 @@ foreach ($produkList as $produk) {
     <?php include 'sidebar.php'; ?>
     <div class="main-content container mt-5">
         <h2>Tambah Transaksi</h2>
-        <form id="transaksiForm" action="proses_tambah_transaksi.php" method="post">
+        <form id="transaksiForm" action="proses_tambah_transaksi.php" method="post" enctype="multipart/form-data">
+            <div class="mb-3">
+                <label for="nama_user" class="form-label">Pilih Pengguna</label>
+                <select class="form-select" id="nama_user" name="nama_user" required>
+                    <option value="">Pilih Pengguna</option>
+                    <?php foreach ($penggunaList as $pengguna): ?>
+                        <option value="<?= htmlspecialchars($pengguna['id_user']); ?>">
+                            <?= htmlspecialchars($pengguna['nama_user']); ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
             <div class="mb-3">
                 <label for="nama_produk" class="form-label">Pilih Produk</label>
                 <select class="form-select" id="nama_produk" name="nama_produk" required>
@@ -81,6 +95,10 @@ foreach ($produkList as $produk) {
             <div class="mb-3">
                 <label for="tanggal" class="form-label">Tanggal</label>
                 <input type="date" class="form-control" id="tanggal" name="tanggal" required>
+            </div>
+            <div class="mb-3">
+                <label for="gambar" class="form-label">Upload Bukti Transaksi</label>
+                <input type="file" class="form-control" id="gambar" name="gambar" accept="image/*" required>
             </div>
             <input type="hidden" name="id_admin" value="<?= htmlspecialchars($_SESSION['id_admin']); ?>">
             <button type="submit" class="btn btn-primary">Tambah Transaksi</button>

@@ -17,6 +17,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $total_harga = $_POST['total_harga'];
     $tanggal = $_POST['tanggal'];
     $id_admin = $_SESSION['id_admin'];
+    $id_user = $_POST['nama_user'];
 
     // Mengambil id_produk berdasarkan nama_produk dan ukuran
     $stmt = $pdo->prepare("SELECT id_produk FROM Produk WHERE nama = ? AND ukuran = ?");
@@ -28,17 +29,36 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     }
     $id_produk = $produk['id_produk'];
 
+    // Proses upload gambar
+    $gambar = null;
+    if (isset($_FILES['gambar']) && $_FILES['gambar']['error'] === UPLOAD_ERR_OK) {
+        $uploadDir = '../bukti/';
+        $fileName = uniqid() . '-' . basename($_FILES['gambar']['name']);
+        $filePath = $uploadDir . $fileName;
+
+        // Memindahkan file yang diunggah ke folder "bukti/"
+        if (move_uploaded_file($_FILES['gambar']['tmp_name'], $filePath)) {
+            $gambar = $fileName;
+        } else {
+            echo "Gagal mengunggah gambar.";
+            exit;
+        }
+    } else {
+        echo "Harap unggah gambar yang valid.";
+        exit;
+    }
+
     try {
         $pdo->beginTransaction();
 
         // Memasukkan data ke tabel transaksi
-        $stmt = $pdo->prepare("INSERT INTO transaksi (id_user, tanggal, total, id_admin) VALUES (NULL, ?, ?, ?)");
-        $stmt->execute([$tanggal, $total_harga, $id_admin]);
+        $stmt = $pdo->prepare("INSERT INTO transaksi (id_user, tanggal, total, id_admin) VALUES (?, ?, ?, ?)");
+        $stmt->execute([$id_user, $tanggal, $total_harga, $id_admin]);
         $id_transaksi = $pdo->lastInsertId();
 
         // Memasukkan data ke tabel detail_transaksi
-        $stmt = $pdo->prepare("INSERT INTO detail_transaksi (id_transaksi, id_produk, harga, jumlah) VALUES (?, ?, ?, ?)");
-        $stmt->execute([$id_transaksi, $id_produk, $harga, $jumlah]);
+        $stmt = $pdo->prepare("INSERT INTO detail_transaksi (id_transaksi, id_produk, harga, jumlah, gambar) VALUES (?, ?, ?, ?, ?)");
+        $stmt->execute([$id_transaksi, $id_produk, $harga, $jumlah, $gambar]);
 
         // Mengurangi stok produk
         $stmt = $pdo->prepare("UPDATE Produk SET stock = stock - ? WHERE id_produk = ?");
