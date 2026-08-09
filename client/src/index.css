@@ -1,0 +1,25 @@
+@import "tailwindcss";
+
+@theme {
+  --color-gallery-white: #FAF9F6;
+  --color-gallery-stone: #E8E6E1;
+  --color-gallery-ink: #1A1A1A;
+  --color-gallery-subtle: #737373;
+  
+  --font-serif: "Playfair Display", "Cormorant", serif;
+  --font-sans: "Inter", "Helvetica Neue", sans-serif;
+}
+
+@layer base {
+  body {
+    background-color: var(--color-gallery-white);
+    color: var(--color-gallery-ink);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-serif);
+    font-weight: 400;
+  }
+}
