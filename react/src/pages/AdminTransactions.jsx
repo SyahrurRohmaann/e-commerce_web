@@ -22,6 +22,7 @@ export function AdminTransactions() {
 
   const [updateError, setUpdateError] = useState('');
   
+  const [paymentStatus, setPaymentStatus] = useState('PENDING');
   const [shippingStatus, setShippingStatus] = useState('pending');
   const [shippingMethod, setShippingMethod] = useState('');
   const [shippingCourier, setShippingCourier] = useState('');
@@ -33,6 +34,7 @@ export function AdminTransactions() {
       const res = await api.get(`/admin/transactions/${id}`);
       const tx = res.data.data;
       setSelectedTx(tx);
+      setPaymentStatus(tx.status || 'PENDING');
       setShippingStatus(tx.shipping_status || 'pending');
       setShippingMethod(tx.shipping_method || '');
       setShippingCourier(tx.shipping_courier || '');
@@ -46,12 +48,17 @@ export function AdminTransactions() {
     e.preventDefault();
     setUpdateError('');
     try {
-      const payload = { shipping_status: shippingStatus };
+      const payload = { 
+        status: paymentStatus,
+        shipping_status: shippingStatus 
+      };
+      
       if (shippingStatus === 'shipping') {
         payload.shipping_method = shippingMethod;
         payload.shipping_courier = shippingCourier;
         payload.tracking_number = trackingNumber;
       }
+      
       const res = await api.put(`/admin/transactions/${selectedTx.id}/status`, payload);
       alert('Status updated successfully');
       loadDetail(selectedTx.id);
@@ -136,33 +143,52 @@ export function AdminTransactions() {
           </table>
 
           <div className="pt-8 border-t border-gallery-stone">
-            <h3 className="text-xs uppercase tracking-widest text-gallery-subtle mb-4">Update Shipping Status</h3>
+            <h3 className="text-xs uppercase tracking-widest text-gallery-subtle mb-4">Update Order Status</h3>
             {updateError && (
               <div className="bg-red-50 text-red-800 border border-red-200 p-3 mb-4 text-sm">{updateError}</div>
             )}
-            <form onSubmit={updateStatus} className="bg-gallery-stone/10 p-6">
-              <div className="mb-4">
-                <label className="block text-xs uppercase tracking-widest text-gallery-subtle mb-2">Status</label>
+            <form onSubmit={updateStatus} className="bg-gallery-stone/10 p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+              
+              {/* KOLOM 1: STATUS PEMBAYARAN */}
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-widest text-gallery-subtle mb-2">Status Pembayaran</label>
+                <select 
+                  value={paymentStatus}
+                  onChange={(e) => setPaymentStatus(e.target.value)}
+                  className="w-full border border-gallery-stone p-2 bg-white mb-2"
+                >
+                  <option value="PENDING">Pending (Belum Bayar)</option>
+                  <option value="PAID">Paid (Sudah Dibayar)</option>
+                  <option value="EXPIRED">Expired</option>
+                </select>
+                <p className="text-[10px] text-gallery-subtle">
+                  *Update manual ke PAID akan memotong stok otomatis. Normalnya ini terupdate otomatis lewat Webhook Xendit.
+                </p>
+              </div>
+
+              {/* KOLOM 2: STATUS PENGIRIMAN */}
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-widest text-gallery-subtle mb-2">Status Pengiriman</label>
                 <select 
                   value={shippingStatus}
                   onChange={(e) => setShippingStatus(e.target.value)}
                   className="w-full border border-gallery-stone p-2 bg-white"
                 >
-                  <option value="pending">Pending</option>
-                  <option value="shipping">Shipping</option>
-                  <option value="arrive">Arrive</option>
+                  <option value="pending">Belum Dikirim (Pending)</option>
+                  <option value="shipping">Sedang Dikirim (Shipping)</option>
+                  <option value="arrive">Sudah Sampai (Arrive)</option>
                 </select>
               </div>
 
               {shippingStatus === 'shipping' && (
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-3 gap-4 mt-2 bg-white p-4 border border-gallery-stone">
                   <div>
                     <label className="block text-xs uppercase tracking-widest text-gallery-subtle mb-2">Tipe Pengiriman</label>
                     <input 
                       type="text" 
                       value={shippingMethod}
                       onChange={(e) => setShippingMethod(e.target.value)}
-                      placeholder="Reguler / Kargo / dll"
+                      placeholder="Cth: Reguler / Kargo"
                       className="w-full border border-gallery-stone p-2"
                       required
                     />
@@ -173,7 +199,7 @@ export function AdminTransactions() {
                       type="text" 
                       value={shippingCourier}
                       onChange={(e) => setShippingCourier(e.target.value)}
-                      placeholder="JNE / J&T / Sicepat"
+                      placeholder="Cth: JNE / J&T"
                       className="w-full border border-gallery-stone p-2"
                       required
                     />
@@ -184,7 +210,7 @@ export function AdminTransactions() {
                       type="text" 
                       value={trackingNumber}
                       onChange={(e) => setTrackingNumber(e.target.value)}
-                      placeholder="Resi"
+                      placeholder="Cth: JP12345678"
                       className="w-full border border-gallery-stone p-2"
                       required
                     />
@@ -192,9 +218,11 @@ export function AdminTransactions() {
                 </div>
               )}
               
-              <button type="submit" className="bg-gallery-ink text-white px-6 py-2 text-xs tracking-widest uppercase hover:bg-black transition-colors">
-                Update Status
-              </button>
+              <div className="md:col-span-2 text-right mt-2">
+                <button type="submit" className="bg-gallery-ink text-white px-8 py-3 text-xs font-bold tracking-widest uppercase hover:bg-black transition-colors">
+                  Simpan Perubahan Status
+                </button>
+              </div>
             </form>
           </div>
 

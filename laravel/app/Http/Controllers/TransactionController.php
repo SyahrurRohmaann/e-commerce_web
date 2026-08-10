@@ -36,31 +36,55 @@ class TransactionController extends Controller
     public function updateStatus(Request $request, Transaction $transaction)
     {
         $request->validate([
-            'shipping_status' => 'required|in:pending,shipping,arrive'
+            'status' => 'sometimes|required|in:PENDING,PAID,EXPIRED',
+            'shipping_status' => 'sometimes|required|in:pending,shipping,arrive'
         ]);
 
-        if ($request->shipping_status === 'shipping') {
-            if ($transaction->status !== 'PAID') {
-                return response()->json(['message' => 'Pesanan belum dibayar.'], 400);
-            }
-            $request->validate([
-                'shipping_method' => 'required|string',
-                'shipping_courier' => 'required|string',
-                'tracking_number' => 'required|string',
-            ], [
-                'shipping_method.required' => 'Jenis pengiriman wajib diisi.',
-                'shipping_courier.required' => 'Kurir wajib diisi.',
-                'tracking_number.required' => 'Nomor resi wajib diisi.'
-            ]);
+        $updates = [];
+
+        // Manual Payment Status Update
+        if ($request->has('status') && $request->status !== $transaction->status) {
+            $updates['status'] = $request->status;
             
-            $transaction->update([
-                'shipping_status' => 'shipping',
-                'shipping_method' => $request->shipping_method,
-                'shipping_courier' => $request->shipping_courier,
-                'tracking_number' => $request->tracking_number,
-            ]);
-        } else {
-            $transaction->update(['shipping_status' => $request->shipping_status]);
+            // Kurangi stok jika admin menandai PAID secara manual
+            if ($request->status === 'PAID') {
+                foreach ($transaction->items as $item) {
+                    if ($item->product_id) {
+                        \App\Models\Product::where('id', $item->product_id)->decrement('stock', $item->quantity);
+                    }
+                }
+            }
+        }
+
+        // Shipping Status Update
+        if ($request->has('shipping_status')) {
+            if ($request->shipping_status === 'shipping') {
+                $checkStatus = $request->has('status') ? $request->status : $transaction->status;
+                if ($checkStatus !== 'PAID') {
+                    return response()->json(['message' => 'Pesanan belum dibayar. Tidak bisa ubah ke status shipping.'], 400);
+                }
+                
+                $request->validate([
+                    'shipping_method' => 'required|string',
+                    'shipping_courier' => 'required|string',
+                    'tracking_number' => 'required|string',
+                ], [
+                    'shipping_method.required' => 'Jenis pengiriman wajib diisi.',
+                    'shipping_courier.required' => 'Kurir wajib diisi.',
+                    'tracking_number.required' => 'Nomor resi wajib diisi.'
+                ]);
+                
+                $updates['shipping_status'] = 'shipping';
+                $updates['shipping_method'] = $request->shipping_method;
+                $updates['shipping_courier'] = $request->shipping_courier;
+                $updates['tracking_number'] = $request->tracking_number;
+            } else {
+                $updates['shipping_status'] = $request->shipping_status;
+            }
+        }
+
+        if (!empty($updates)) {
+            $transaction->update($updates);
         }
 
         return response()->json(['data' => $transaction, 'message' => 'Status updated']);
