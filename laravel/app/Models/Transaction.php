@@ -13,6 +13,7 @@ class Transaction extends Model
         'invoice_url', 
         'total_amount', 
         'status',
+        'payment_method',
         'customer_name',
         'customer_phone',
         'guest_email',

@@ -14,6 +14,7 @@ class TransactionController extends Controller
 
     public function show(Transaction $transaction)
     {
+        $this->syncStatusWithXendit($transaction);
         return response()->json(['data' => $transaction->load(['user', 'items'])]);
     }
 
@@ -29,8 +30,54 @@ class TransactionController extends Controller
         if (!$transaction) {
             return response()->json(['message' => 'Not found'], 404);
         }
+        
+        $this->syncStatusWithXendit($transaction);
 
         return response()->json(['data' => $transaction]);
+    }
+
+    private function syncStatusWithXendit(Transaction $transaction)
+    {
+        if ($transaction->status !== 'PENDING' || !$transaction->xendit_invoice_id) {
+            return;
+        }
+
+        try {
+            \Xendit\Configuration::setXenditKey(env('XENDIT_API_KEY'));
+            $client = new \GuzzleHttp\Client(['verify' => false]);
+            $apiInstance = new \Xendit\Invoice\InvoiceApi($client);
+            
+            $invoice = $apiInstance->getInvoiceById($transaction->xendit_invoice_id);
+
+            if (isset($invoice['status']) && $invoice['status'] !== 'PENDING') {
+                $status = $invoice['status'];
+                
+                \Illuminate\Support\Facades\DB::transaction(function () use ($transaction, $invoice, $status) {
+                    $transaction->refresh();
+                    if ($transaction->status !== 'PENDING') return;
+
+                    $updateData = ['status' => $status];
+                    if (isset($invoice['payment_channel'])) {
+                        $updateData['payment_method'] = $invoice['payment_channel'];
+                    } elseif (isset($invoice['payment_method'])) {
+                        $updateData['payment_method'] = $invoice['payment_method'];
+                    }
+
+                    if ($status === 'PAID') {
+                        $transaction->update($updateData);
+                        foreach ($transaction->items as $item) {
+                            if ($item->product_id) {
+                                \App\Models\Product::where('id', $item->product_id)->decrement('stock', $item->quantity);
+                            }
+                        }
+                    } elseif ($status === 'EXPIRED') {
+                        $transaction->update($updateData);
+                    }
+                });
+            }
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Failed to sync Xendit status: ' . $e->getMessage());
+        }
     }
     
     public function updateStatus(Request $request, Transaction $transaction)
