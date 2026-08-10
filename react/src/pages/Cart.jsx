@@ -6,7 +6,7 @@ const formatIDR = (n) => `Rp ${(n ?? 0).toLocaleString('id-ID')}`;
 function QtyControl({ qty, onChange }) {
   return (
     <div className="flex items-center border border-gallery-stone">
-      <button type="button" onClick={() => onChange(qty - 1)} className="w-8 h-8 hover:bg-gallery-stone/40 transition-colors">−</button>
+      <button type="button" onClick={() => onChange(qty - 1)} className="w-8 h-8 hover:bg-gallery-stone/40 transition-colors">-</button>
       <span className="w-10 text-center text-sm">{qty}</span>
       <button type="button" onClick={() => onChange(qty + 1)} className="w-8 h-8 hover:bg-gallery-stone/40 transition-colors">+</button>
     </div>
@@ -26,15 +26,6 @@ export function Cart() {
   return (
     <div className="max-w-4xl mx-auto px-6 py-32 animate-in fade-in duration-700">
       <h2 className="text-4xl font-serif mb-16 pb-8 border-b border-gallery-stone text-center">Your Selection</h2>
-      
-      {error && (
-        <div className="bg-red-50 text-red-800 border border-red-200 p-4 mb-8 text-sm text-center">
-          {error}
-          {error.includes('log in') && (
-             <Link to="/login" className="ml-4 underline font-medium">Log in here</Link>
-          )}
-        </div>
-      )}
 
       {items.length === 0 ? (
         <div className="text-center py-24">

@@ -39,7 +39,30 @@ class TransactionController extends Controller
             'shipping_status' => 'required|in:pending,shipping,arrive'
         ]);
 
-        $transaction->update(['shipping_status' => $request->shipping_status]);
+        if ($request->shipping_status === 'shipping') {
+            if ($transaction->status !== 'PAID') {
+                return response()->json(['message' => 'Pesanan belum dibayar.'], 400);
+            }
+            $request->validate([
+                'shipping_method' => 'required|string',
+                'shipping_courier' => 'required|string',
+                'tracking_number' => 'required|string',
+            ], [
+                'shipping_method.required' => 'Jenis pengiriman wajib diisi.',
+                'shipping_courier.required' => 'Kurir wajib diisi.',
+                'tracking_number.required' => 'Nomor resi wajib diisi.'
+            ]);
+            
+            $transaction->update([
+                'shipping_status' => 'shipping',
+                'shipping_method' => $request->shipping_method,
+                'shipping_courier' => $request->shipping_courier,
+                'tracking_number' => $request->tracking_number,
+            ]);
+        } else {
+            $transaction->update(['shipping_status' => $request->shipping_status]);
+        }
+
         return response()->json(['data' => $transaction, 'message' => 'Status updated']);
     }
 }

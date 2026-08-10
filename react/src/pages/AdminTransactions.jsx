@@ -20,12 +20,44 @@ export function AdminTransactions() {
     }
   };
 
+  const [updateError, setUpdateError] = useState('');
+  
+  const [shippingStatus, setShippingStatus] = useState('pending');
+  const [shippingMethod, setShippingMethod] = useState('');
+  const [shippingCourier, setShippingCourier] = useState('');
+  const [trackingNumber, setTrackingNumber] = useState('');
+
   const loadDetail = async (id) => {
     try {
+      setUpdateError('');
       const res = await api.get(`/admin/transactions/${id}`);
-      setSelectedTx(res.data.data);
+      const tx = res.data.data;
+      setSelectedTx(tx);
+      setShippingStatus(tx.shipping_status || 'pending');
+      setShippingMethod(tx.shipping_method || '');
+      setShippingCourier(tx.shipping_courier || '');
+      setTrackingNumber(tx.tracking_number || '');
     } catch {
       alert('Failed to load transaction details');
+    }
+  };
+
+  const updateStatus = async (e) => {
+    e.preventDefault();
+    setUpdateError('');
+    try {
+      const payload = { shipping_status: shippingStatus };
+      if (shippingStatus === 'shipping') {
+        payload.shipping_method = shippingMethod;
+        payload.shipping_courier = shippingCourier;
+        payload.tracking_number = trackingNumber;
+      }
+      const res = await api.put(`/admin/transactions/${selectedTx.id}/status`, payload);
+      alert('Status updated successfully');
+      loadDetail(selectedTx.id);
+      fetchTransactions();
+    } catch (err) {
+      setUpdateError(err.response?.data?.message || err.response?.data?.errors ? Object.values(err.response.data.errors).flat().join(', ') : 'Failed to update status');
     }
   };
 
@@ -66,7 +98,7 @@ export function AdminTransactions() {
             <div>
               <h3 className="text-xs uppercase tracking-widest text-gallery-subtle mb-4">Customer Details</h3>
               <p className="mb-1">{selectedTx.customer_name}</p>
-              <p className="text-gallery-subtle">{selectedTx.customer_email}</p>
+              <p className="text-gallery-subtle">{selectedTx.guest_email || selectedTx.user?.email}</p>
               <p className="text-gallery-subtle">{selectedTx.customer_phone}</p>
             </div>
             <div>
@@ -90,21 +122,84 @@ export function AdminTransactions() {
                 <tr key={item.id}>
                   <td className="py-4">{item.product_name}</td>
                   <td className="py-4 text-center">{item.quantity}</td>
-                  <td className="py-4 text-right">${Number(item.price).toLocaleString()}</td>
-                  <td className="py-4 text-right">${(Number(item.price) * item.quantity).toLocaleString()}</td>
+                  <td className="py-4 text-right">Rp {Number(item.price).toLocaleString('id-ID')}</td>
+                  <td className="py-4 text-right">Rp {(Number(item.price) * item.quantity).toLocaleString('id-ID')}</td>
                 </tr>
               ))}
             </tbody>
             <tfoot>
               <tr>
                 <td colSpan="3" className="py-4 text-right text-xs uppercase tracking-widest text-gallery-subtle">Total Amount</td>
-                <td className="py-4 text-right text-xl font-serif">${Number(selectedTx.total_amount).toLocaleString()}</td>
+                <td className="py-4 text-right text-xl font-serif">Rp {Number(selectedTx.total_amount).toLocaleString('id-ID')}</td>
               </tr>
             </tfoot>
           </table>
 
+          <div className="pt-8 border-t border-gallery-stone">
+            <h3 className="text-xs uppercase tracking-widest text-gallery-subtle mb-4">Update Shipping Status</h3>
+            {updateError && (
+              <div className="bg-red-50 text-red-800 border border-red-200 p-3 mb-4 text-sm">{updateError}</div>
+            )}
+            <form onSubmit={updateStatus} className="bg-gallery-stone/10 p-6">
+              <div className="mb-4">
+                <label className="block text-xs uppercase tracking-widest text-gallery-subtle mb-2">Status</label>
+                <select 
+                  value={shippingStatus}
+                  onChange={(e) => setShippingStatus(e.target.value)}
+                  className="w-full border border-gallery-stone p-2 bg-white"
+                >
+                  <option value="pending">Pending</option>
+                  <option value="shipping">Shipping</option>
+                  <option value="arrive">Arrive</option>
+                </select>
+              </div>
+
+              {shippingStatus === 'shipping' && (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                  <div>
+                    <label className="block text-xs uppercase tracking-widest text-gallery-subtle mb-2">Tipe Pengiriman</label>
+                    <input 
+                      type="text" 
+                      value={shippingMethod}
+                      onChange={(e) => setShippingMethod(e.target.value)}
+                      placeholder="Reguler / Kargo / dll"
+                      className="w-full border border-gallery-stone p-2"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs uppercase tracking-widest text-gallery-subtle mb-2">Kurir</label>
+                    <input 
+                      type="text" 
+                      value={shippingCourier}
+                      onChange={(e) => setShippingCourier(e.target.value)}
+                      placeholder="JNE / J&T / Sicepat"
+                      className="w-full border border-gallery-stone p-2"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs uppercase tracking-widest text-gallery-subtle mb-2">Nomor Resi</label>
+                    <input 
+                      type="text" 
+                      value={trackingNumber}
+                      onChange={(e) => setTrackingNumber(e.target.value)}
+                      placeholder="Resi"
+                      className="w-full border border-gallery-stone p-2"
+                      required
+                    />
+                  </div>
+                </div>
+              )}
+              
+              <button type="submit" className="bg-gallery-ink text-white px-6 py-2 text-xs tracking-widest uppercase hover:bg-black transition-colors">
+                Update Status
+              </button>
+            </form>
+          </div>
+
           {selectedTx.invoice_url && (
-            <div className="pt-8 border-t border-gallery-stone text-right">
+            <div className="pt-8 border-t border-gallery-stone text-right mt-8">
               <a href={selectedTx.invoice_url} target="_blank" rel="noreferrer" className="inline-block bg-gallery-ink text-white px-8 py-3 text-sm tracking-widest uppercase hover:bg-black transition-colors">
                 View Invoice
               </a>
@@ -130,7 +225,7 @@ export function AdminTransactions() {
                   <td className="px-6 py-4 font-mono text-xs">#{t.id.toString().padStart(4, '0')}</td>
                   <td className="px-6 py-4 text-gallery-subtle text-xs">{new Date(t.created_at).toLocaleDateString()}</td>
                   <td className="px-6 py-4">{t.customer_name}</td>
-                  <td className="px-6 py-4">${Number(t.total_amount).toLocaleString()}</td>
+                  <td className="px-6 py-4">Rp {Number(t.total_amount).toLocaleString('id-ID')}</td>
                   <td className="px-6 py-4">
                     <span className={`px-2 py-1 text-[10px] tracking-widest uppercase rounded-sm ${
                       t.status === 'PAID' ? 'bg-green-100 text-green-800' :

@@ -20,7 +20,10 @@ class Transaction extends Model
         'shipping_city',
         'shipping_postal_code',
         'shipping_cost',
-        'shipping_status'
+        'shipping_status',
+        'shipping_method',
+        'shipping_courier',
+        'tracking_number'
     ];
 
     public function user()

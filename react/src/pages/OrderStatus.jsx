@@ -48,7 +48,7 @@ export const OrderStatus = () => {
             <div className="bg-white shadow p-6 rounded mb-6">
                 <div className="flex justify-between items-center mb-4">
                     <h2 className="text-lg font-semibold">Payment Status</h2>
-                    <span className="px-3 py-1 rounded-full font-bold bg-gray-100">{transaction.status}</span>
+                    <span className={`px-3 py-1 rounded-full font-bold ${transaction.status === 'PAID' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>{transaction.status}</span>
                 </div>
                 
                 <div className="flex justify-between items-center">
@@ -57,6 +57,13 @@ export const OrderStatus = () => {
                         {transaction.shipping_status.toUpperCase()}
                     </span>
                 </div>
+
+                {transaction.shipping_status === 'shipping' && (
+                    <div className="mt-4 pt-4 border-t border-gray-200">
+                        <p className="text-sm text-gray-600 mb-1">Pengiriman via: <strong>{transaction.shipping_courier}</strong> ({transaction.shipping_method})</p>
+                        <p className="text-sm text-gray-600">Nomor Resi: <strong className="font-mono bg-gray-100 px-2 py-1 select-all">{transaction.tracking_number}</strong></p>
+                    </div>
+                )}
             </div>
 
             <div className="bg-white shadow p-6 rounded">

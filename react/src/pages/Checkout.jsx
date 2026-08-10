@@ -102,12 +102,16 @@ export const Checkout = () => {
     } finally { setLoginLoading(false); }
   };
 
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   const submitShipping = e => {
     e.preventDefault();
     setPhase('confirm');
   };
 
   const doCheckout = async () => {
+    if (isSubmitting) return;
+    setIsSubmitting(true);
     setError('');
     const payload = { items, ...formData };
     // don't send guest_email for logged-in users
@@ -126,6 +130,7 @@ export const Checkout = () => {
       }
     } catch (err) {
       setError(err.response?.data?.message || err.response?.data?.errors ? Object.values(err.response.data.errors).flat().join(', ') : 'Checkout failed');
+      setIsSubmitting(false);
     }
   };
 
@@ -305,8 +310,10 @@ export const Checkout = () => {
       </div>
 
       <div className="flex gap-4 justify-center">
-        <button onClick={() => setPhase('form')} className="border border-gallery-ink px-8 py-3 text-sm tracking-widest uppercase hover:bg-gallery-stone/30 transition-colors">Edit</button>
-        <button onClick={doCheckout} className="bg-gallery-ink text-white px-8 py-3 text-sm tracking-widest uppercase font-bold hover:bg-black transition-colors">Pay Now</button>
+        <button onClick={() => setPhase('form')} disabled={isSubmitting} className="border border-gallery-ink px-8 py-3 text-sm tracking-widest uppercase hover:bg-gallery-stone/30 transition-colors disabled:opacity-50">Edit</button>
+        <button onClick={doCheckout} disabled={isSubmitting} className="bg-gallery-ink text-white px-8 py-3 text-sm tracking-widest uppercase font-bold hover:bg-black transition-colors disabled:opacity-70">
+          {isSubmitting ? 'Processing...' : 'Pay Now'}
+        </button>
       </div>
     </div>
   );
