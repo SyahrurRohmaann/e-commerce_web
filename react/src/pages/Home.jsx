@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import api from '../lib/axios';
 import { useCartStore } from '../store/cart';
-import { Link } from 'react-router-dom';
 
 export function Home() {
   const [products, setProducts] = useState([]);
@@ -19,33 +18,82 @@ export function Home() {
   return (
     <div className="animate-in fade-in duration-1000">
       {/* Hero Section */}
-      <section className="relative h-[85vh] w-full bg-gallery-stone flex items-center justify-center overflow-hidden">
-        <div className="absolute inset-0">
-          <img 
-            src={heroProduct.image_url} 
-            alt={heroProduct.name}
-            className="w-full h-full object-cover opacity-90 scale-105 hover:scale-100 transition-transform duration-[20s]"
-            onError={(e) => { e.target.src = 'https://images.unsplash.com/photo-1611078489935-0cb964de46d6?auto=format&fit=crop&q=80&w=2000'; }}
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent"></div>
+      <section className="relative min-h-[90vh] w-full bg-gallery-white pt-20 flex flex-col">
+        {/* Top Typography Bar */}
+        <div className="w-full max-w-7xl mx-auto px-6 pt-10 flex items-center justify-between text-[10px] sm:text-xs font-bold tracking-widest text-gallery-ink uppercase relative z-20">
+          <span className="hidden sm:inline">MOVE COMFORTABLY</span>
+          <div className="hidden sm:block flex-1 h-px bg-gallery-stone mx-6"></div>
+          <span>LIVE FREELY</span>
+          <div className="hidden sm:block flex-1 h-px bg-gallery-stone mx-6"></div>
+          <span className="hidden sm:inline">FEEL CONFIDENT</span>
         </div>
-        
-        <div className="relative z-10 text-center text-white px-4 max-w-4xl mx-auto mt-20">
-          <h2 className="text-sm tracking-[0.3em] uppercase mb-6 opacity-80">{heroProduct.category?.name || 'Featured'}</h2>
-          <h1 className="text-5xl md:text-7xl font-serif mb-8 leading-tight">{heroProduct.name}</h1>
-          <p className="text-lg md:text-xl font-light mb-12 max-w-2xl mx-auto opacity-90">{heroProduct.description}</p>
-          <button 
-            onClick={() => addItem(heroProduct)}
-            disabled={heroProduct.stock < 1}
-            className="border border-white/30 backdrop-blur-sm bg-white/10 hover:bg-white text-white hover:text-gallery-ink px-10 py-4 text-sm tracking-widest uppercase transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {heroProduct.stock < 1 ? 'Out of Stock' : 'Acquire'}
-          </button>
+
+        <div className="flex-1 relative flex items-center justify-center w-full max-w-7xl mx-auto px-6 mt-4 pb-24">
+          {/* Huge Background Text */}
+          <div className="absolute inset-0 flex items-center justify-center z-0 pointer-events-none overflow-hidden">
+            <h1 className="text-[18vw] font-sans font-black tracking-tighter text-gallery-ink leading-[0.8] whitespace-nowrap opacity-95 mb-16">
+              PURE COMFORT
+            </h1>
+          </div>
+
+          {/* Center Image */}
+          <div className="absolute bottom-0 z-10 w-[400px] sm:w-[500px] max-w-full flex items-end justify-center">
+            <img 
+              src={heroProduct.image_url} 
+              alt={heroProduct.name}
+              className="w-full h-150 object-contain object-bottom drop-shadow-2xl"
+              onError={(e) => { e.target.src = 'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&q=80&w=800&h=1200'; }}
+            />
+          </div>
+
+          {/* Left Description */}
+          <div className="absolute left-6 bottom-32 max-w-[240px] z-20 hidden md:block">
+            <p className="text-gallery-ink text-sm leading-relaxed font-medium">
+              {heroProduct.description || "Designed for everyday movement. Soft fabrics, relaxed fits, and effortless comfort."}
+            </p>
+          </div>
+
+          {/* Right Floating Card */}
+          <div className="absolute right-6 top-1/4 z-20 hidden lg:flex flex-col bg-white/30 backdrop-blur-md border border-white/50 p-4 rounded-xl shadow-xl w-[260px] transform rotate-3 hover:rotate-0 transition-transform duration-500">
+            <div className="flex justify-between items-center mb-3">
+              <span className="text-xs font-bold tracking-widest uppercase text-gallery-ink">{heroProduct.name}</span>
+              <span className="text-gallery-ink font-bold leading-none cursor-pointer">⋮</span>
+            </div>
+            <div className="bg-gallery-stone aspect-[3/4] mb-4 rounded-lg overflow-hidden shadow-inner">
+              <img 
+                src={heroProduct.image_url} 
+                alt={heroProduct.name}
+                className="w-full h-full object-cover"
+                onError={(e) => { e.target.src = 'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&q=80&w=800'; }}
+              />
+            </div>
+            <div className="flex justify-between items-center text-sm font-bold text-gallery-ink">
+              <span className="uppercase tracking-widest text-[10px] text-gallery-subtle">FABRIC</span>
+              <span>${Number(heroProduct.price).toLocaleString()}</span>
+            </div>
+          </div>
+
+          {/* Bottom CTA Buttons */}
+          <div className="absolute bottom-10 left-1/2 -translate-x-1/2 flex flex-col sm:flex-row gap-4 z-30 w-full sm:w-auto px-6">
+            <button 
+              onClick={() => addItem(heroProduct)}
+              disabled={heroProduct.stock < 1}
+              className="bg-[#E54825] text-white px-8 py-3.5 text-xs font-bold tracking-widest uppercase rounded-full hover:bg-[#c93d1e] transition-colors shadow-lg disabled:opacity-50 w-full sm:w-auto whitespace-nowrap"
+            >
+              {heroProduct.stock < 1 ? 'Out of Stock' : 'Shop the Collection'}
+            </button>
+            <button 
+              onClick={() => document.getElementById('collection').scrollIntoView({ behavior: 'smooth' })}
+              className="bg-white/20 border border-gallery-ink/20 backdrop-blur-sm text-gallery-ink px-8 py-3.5 text-xs font-bold tracking-widest uppercase rounded-full hover:bg-white/40 transition-colors w-full sm:w-auto whitespace-nowrap"
+            >
+              Explore New Arrivals
+            </button>
+          </div>
         </div>
       </section>
 
       {/* Gallery Section */}
-      <section className="max-w-7xl mx-auto px-6 py-32">
+      <section id="collection" className="max-w-7xl mx-auto px-6 py-32">
         <div className="flex justify-between items-end mb-16 border-b border-gallery-stone pb-8">
           <h2 className="text-3xl font-serif">The Collection</h2>
           <span className="text-sm tracking-widest uppercase text-gallery-subtle">{galleryProducts.length} Pieces</span>

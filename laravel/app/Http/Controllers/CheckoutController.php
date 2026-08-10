@@ -57,6 +57,16 @@ class CheckoutController extends Controller
             $shippingCost = 25000;
             $totalAmount += $shippingCost;
 
+            if ($user) {
+                // Update user profile with the latest checkout details
+                $user->update([
+                    'phone' => $request->customer_phone,
+                    'address' => $request->shipping_address,
+                    'city' => $request->shipping_city,
+                    'postal_code' => $request->shipping_postal_code,
+                ]);
+            }
+
             $trackingToken = $user ? null : \Illuminate\Support\Str::uuid()->toString();
 
             $transaction = Transaction::create([
