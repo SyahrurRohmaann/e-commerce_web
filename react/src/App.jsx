@@ -13,6 +13,7 @@ import { AdminProducts } from './pages/AdminProducts';
 import { AdminTransactions } from './pages/AdminTransactions';
 import { OrderStatus } from './pages/OrderStatus';
 import { CheckoutSuccess } from './pages/CheckoutSuccess';
+import { CheckoutFailure } from './pages/CheckoutFailure';
 import { Profile } from './pages/Profile';
 
 function App() {
@@ -39,6 +40,7 @@ function App() {
           <Route path="/cart" element={<Cart />} />
           <Route path="/checkout" element={<Checkout />} />
           <Route path="/checkout/success" element={<CheckoutSuccess />} />
+          <Route path="/checkout/failure" element={<CheckoutFailure />} />
           <Route path="/orders/:id" element={<OrderStatus />} />
           <Route path="/login" element={<Login />} />
           <Route path="/profile" element={<Profile />} />

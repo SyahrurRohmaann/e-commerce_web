@@ -24,8 +24,8 @@ Dokumen ini adalah **aturan main** untuk agent yang mengeksekusi `PRD_MIGRATION.
 - Payment: Xendit Invoice API + Webhook.
 - Struktur repo:
   ```
-  /api      -> backend Laravel
-  /client   -> frontend React (Vite)
+  /laravel  -> backend Laravel
+  /react    -> frontend React (Vite)
   ```
 
 ## 4. Konvensi Kode

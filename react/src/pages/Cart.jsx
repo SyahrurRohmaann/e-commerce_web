@@ -1,32 +1,26 @@
 import { useCartStore } from '../store/cart';
-import api from '../lib/axios';
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+
+const formatIDR = (n) => `Rp ${(n ?? 0).toLocaleString('id-ID')}`;
+
+function QtyControl({ qty, onChange }) {
+  return (
+    <div className="flex items-center border border-gallery-stone">
+      <button type="button" onClick={() => onChange(qty - 1)} className="w-8 h-8 hover:bg-gallery-stone/40 transition-colors">−</button>
+      <span className="w-10 text-center text-sm">{qty}</span>
+      <button type="button" onClick={() => onChange(qty + 1)} className="w-8 h-8 hover:bg-gallery-stone/40 transition-colors">+</button>
+    </div>
+  );
+}
 
 export function Cart() {
-  const { items, removeItem, clearCart } = useCartStore();
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const { items, removeItem, updateQuantity, clearCart } = useCartStore();
+  const navigate = useNavigate();
 
   const total = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
 
-  const handleCheckout = async () => {
-    setLoading(true);
-    setError('');
-    try {
-      const res = await api.post('/checkout', { items });
-      if (res.data.invoice_url) {
-        clearCart();
-        window.location.href = res.data.invoice_url;
-      }
-    } catch (err) {
-      if (err.response?.status === 401) {
-        setError('Authentication required. Please log in to complete purchase.');
-      } else {
-        setError(err.response?.data?.message || 'Checkout failed');
-      }
-    }
-    setLoading(false);
+  const handleCheckout = () => {
+    navigate('/checkout');
   };
 
   return (
@@ -56,10 +50,10 @@ export function Cart() {
               <div key={item.product_id} className="flex items-center justify-between py-6 border-b border-gallery-stone/50">
                 <div className="flex-1">
                   <h3 className="text-lg font-serif mb-2">{item.name}</h3>
-                  <p className="text-sm text-gallery-subtle">Qty: {item.quantity}</p>
+                  <QtyControl qty={item.quantity} onChange={(q) => updateQuantity(item.product_id, q)} />
                 </div>
                 <div className="text-right flex items-center gap-8">
-                  <span className="text-lg">${(item.price * item.quantity).toLocaleString()}</span>
+                  <span className="text-lg">{formatIDR(item.price * item.quantity)}</span>
                   <button 
                     onClick={() => removeItem(item.product_id)}
                     className="text-xs uppercase tracking-widest text-gallery-subtle hover:text-red-600 transition-colors"
@@ -72,16 +66,23 @@ export function Cart() {
           </div>
           
           <div className="flex flex-col items-end border-t border-gallery-stone pt-8">
+            <div className="flex justify-between w-full md:w-1/2 mb-4 text-sm text-gallery-subtle">
+              <span>Subtotal</span>
+              <span>{formatIDR(total)}</span>
+            </div>
+            <div className="flex justify-between w-full md:w-1/2 mb-4 text-sm text-gallery-subtle">
+              <span>Shipping</span>
+              <span>{formatIDR(25000)}</span>
+            </div>
             <div className="flex justify-between w-full md:w-1/2 mb-8 text-2xl font-serif">
               <span>Total</span>
-              <span>${total.toLocaleString()}</span>
+              <span>{formatIDR(total + 25000)}</span>
             </div>
             <button 
               onClick={handleCheckout} 
-              disabled={loading}
-              className="w-full md:w-1/2 bg-gallery-ink text-white py-5 text-sm tracking-widest uppercase hover:bg-black transition-colors disabled:opacity-70"
+              className="w-full md:w-1/2 bg-gallery-ink text-white py-5 text-sm tracking-widest uppercase hover:bg-black transition-colors"
             >
-              {loading ? 'Processing...' : 'Proceed to Checkout'}
+              Proceed to Checkout
             </button>
           </div>
         </div>

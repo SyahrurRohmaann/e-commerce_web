@@ -26,17 +26,20 @@ class WebhookController extends Controller
         }
 
         $transactionId = str_replace('INV-', '', $externalId);
-        $transaction = Transaction::with('items')->find($transactionId);
 
-        if (!$transaction) {
-            return response()->json(['message' => 'Transaction not found'], 404);
-        }
+        DB::transaction(function () use ($transactionId, $status) {
+            $transaction = Transaction::with('items')
+                ->lockForUpdate()
+                ->find($transactionId);
 
-        if ($transaction->status === 'PAID' || $transaction->status === 'EXPIRED') {
-            return response()->json(['message' => 'Transaction already processed']);
-        }
+            if (!$transaction) {
+                return response()->json(['message' => 'Transaction not found'], 404);
+            }
 
-        DB::transaction(function () use ($transaction, $status) {
+            if ($transaction->status === 'PAID' || $transaction->status === 'EXPIRED') {
+                return response()->json(['message' => 'Transaction already processed']);
+            }
+
             if ($status === 'PAID') {
                 $transaction->update(['status' => 'PAID']);
                 

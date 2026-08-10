@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import axios from 'axios';
+import api from '../lib/axios';
 
 export const OrderStatus = () => {
     const { id } = useParams();
@@ -10,20 +10,20 @@ export const OrderStatus = () => {
         const fetchOrder = async () => {
             try {
                 // Determine if guest or logged in
-                const token = localStorage.getItem('token');
-                const isGuest = !token;
-                
-                let url = `http://127.0.0.1:8000/api/transactions/${id}`;
+        const token = localStorage.getItem('token');
+        const isGuest = !token;
+        
+        let url = `/transactions/${id}`;
                 let headers = { 'Accept': 'application/json' };
                 
-                if (isGuest) {
-                    const trackingToken = localStorage.getItem('last_guest_tracking_token');
-                    url = `http://127.0.0.1:8000/api/transactions/guest/${id}?token=${trackingToken}`;
-                } else {
-                    headers['Authorization'] = `Bearer ${token}`;
-                }
+        if (isGuest) {
+            const trackingToken = localStorage.getItem('last_guest_tracking_token');
+            url = `/transactions/guest/${id}?token=${trackingToken}`;
+        } else {
+            headers['Authorization'] = `Bearer ${token}`;
+        }
 
-                const res = await axios.get(url, { headers });
+        const res = await api.get(url, { headers });
                 setTransaction(res.data.data);
             } catch (err) {
                 console.error(err);

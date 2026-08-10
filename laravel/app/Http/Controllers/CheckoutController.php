@@ -20,16 +20,20 @@ class CheckoutController extends Controller
             'items.*.product_id' => 'required|exists:products,id',
             'items.*.quantity' => 'required|integer|min:1',
             
-            // Shipping fields
             'customer_name' => 'required|string',
-            'customer_email' => 'required|email',
             'customer_phone' => 'required|string',
             'shipping_address' => 'required|string',
             'shipping_city' => 'required|string',
             'shipping_postal_code' => 'required|string',
         ]);
 
-        return DB::transaction(function () use ($request) {
+        $user = auth('sanctum')->user();
+
+        if (!$user) {
+            $request->validate(['guest_email' => 'required|email']);
+        }
+
+        return DB::transaction(function () use ($request, $user) {
             $totalAmount = 0;
             $transactionItems = [];
 
@@ -50,24 +54,10 @@ class CheckoutController extends Controller
                 ];
             }
             
-            $shippingCost = 25000; // Mock shipping cost
+            $shippingCost = 25000;
             $totalAmount += $shippingCost;
 
-            // If user is logged in, optionally update their profile
-            $user = auth('sanctum')->user();
-            if ($user && $request->has('save_address_to_profile') && $request->save_address_to_profile) {
-                $user->update([
-                    'phone' => $request->customer_phone,
-                    'address' => $request->shipping_address,
-                    'city' => $request->shipping_city,
-                    'postal_code' => $request->shipping_postal_code,
-                ]);
-            }
-
-            $trackingToken = null;
-            if (!$user) {
-                $trackingToken = \Illuminate\Support\Str::uuid()->toString();
-            }
+            $trackingToken = $user ? null : \Illuminate\Support\Str::uuid()->toString();
 
             $transaction = Transaction::create([
                 'user_id' => $user ? $user->id : null,
@@ -77,6 +67,7 @@ class CheckoutController extends Controller
                 
                 'customer_name' => $request->customer_name,
                 'customer_phone' => $request->customer_phone,
+                'guest_email' => $user ? null : $request->guest_email,
                 'shipping_address' => $request->shipping_address,
                 'shipping_city' => $request->shipping_city,
                 'shipping_postal_code' => $request->shipping_postal_code,
@@ -91,12 +82,10 @@ class CheckoutController extends Controller
 
             Configuration::setXenditKey(env('XENDIT_API_KEY'));
             
-            // Bypass SSL for local development
             $client = new \GuzzleHttp\Client(['verify' => false]);
             $apiInstance = new InvoiceApi($client);
 
-            // Use provided email or fallback
-            $payerEmail = $user ? $user->email : ($request->customer_email ?? 'guest@example.com');
+            $payerEmail = $user ? $user->email : $request->guest_email;
 
             $createInvoiceRequest = new CreateInvoiceRequest([
                 'external_id' => 'INV-' . $transaction->id,
@@ -126,4 +115,3 @@ class CheckoutController extends Controller
         });
     }
 }
-

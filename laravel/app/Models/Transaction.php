@@ -15,6 +15,7 @@ class Transaction extends Model
         'status',
         'customer_name',
         'customer_phone',
+        'guest_email',
         'shipping_address',
         'shipping_city',
         'shipping_postal_code',
