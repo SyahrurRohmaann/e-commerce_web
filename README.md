@@ -1,8 +1,6 @@
-# AlAgance — Premium E-Commerce Platform
+# Alagance — Premium E-Commerce Platform
 
-AlAgance is a modern, luxury-focused e-commerce web application designed for high-end retail brands. Built with a decoupled architecture featuring a React (Vite) single-page application frontend and a Laravel REST API backend, integrated with Xendit payment gateway and real-time multi-currency support.
-
-![Hero Banner Feature](https://images.unsplash.com/photo-1441986300917-64674bd600d8?auto=format&fit=crop&q=80&w=1200&h=400)
+Alagance is a modern, luxury-focused e-commerce web application designed for high-end retail brands. Built with a decoupled architecture featuring a React (Vite) single-page application frontend and a Laravel REST API backend, integrated with Xendit payment gateway and real-time multi-currency support.
 
 ---
 
