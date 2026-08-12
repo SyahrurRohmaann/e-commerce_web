@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
+import { toast } from 'sonner';
 import api from '../lib/axios';
 
 export function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -21,12 +21,13 @@ export function Login() {
   const handleLogin = async (e) => {
     e.preventDefault();
     setLoading(true);
-    setError('');
     
     try {
       const res = await api.post('/login', { email, password });
       localStorage.setItem('token', res.data.access_token);
       localStorage.setItem('role', res.data.user.role);
+      
+      toast.success('Login successful');
       
       if (res.data.user.role === 'admin') {
         navigate('/admin');
@@ -35,9 +36,9 @@ export function Login() {
       }
     } catch (err) {
       if (err.response?.status === 422) {
-        setError(err.response.data.message || 'Invalid credentials');
+        toast.error(err.response.data.message || 'Invalid credentials');
       } else {
-        setError('Login failed. Please verify your credentials and try again.');
+        toast.error('Login failed. Please verify your credentials and try again.');
       }
     } finally {
       setLoading(false);
@@ -51,12 +52,6 @@ export function Login() {
           <h1 className="text-3xl font-serif mb-4">Welcome Back</h1>
           <p className="text-gallery-subtle tracking-widest uppercase text-xs">Enter your credentials to continue</p>
         </div>
-
-        {error && (
-          <div className="bg-red-50 text-red-800 border border-red-200 p-4 mb-8 text-sm text-center">
-            {error}
-          </div>
-        )}
 
         <form onSubmit={handleLogin} className="space-y-6">
           <div>
@@ -89,6 +84,10 @@ export function Login() {
             {loading ? 'Authenticating...' : 'Sign In'}
           </button>
         </form>
+
+        <div className="mt-8 text-center text-sm text-gallery-subtle">
+          Haven't an account? <Link to="/register" className="text-gallery-ink font-bold hover:underline">Register</Link>
+        </div>
         
         {/* Helper info for dev environment */}
         <div className="mt-12 p-4 border border-gallery-stone text-xs text-gallery-subtle flex justify-between">

@@ -17,7 +17,21 @@ export const OrderStatus = () => {
                 let headers = { 'Accept': 'application/json' };
                 
         if (isGuest) {
-            const trackingToken = localStorage.getItem('last_guest_tracking_token');
+            // Find token in URL params first, then localStorage guest array, then fallback to last_guest_tracking_token
+            const searchParams = new URLSearchParams(window.location.search);
+            let trackingToken = searchParams.get('token');
+            
+            if (!trackingToken) {
+              const guestOrders = JSON.parse(localStorage.getItem('guest_orders') || '[]');
+              // Use == to compare string to number
+              // eslint-disable-next-line eqeqeq
+              const foundOrder = guestOrders.find(o => o.id == id);
+              if (foundOrder) {
+                trackingToken = foundOrder.token;
+              } else {
+                trackingToken = localStorage.getItem('last_guest_tracking_token');
+              }
+            }
             url = `/transactions/guest/${id}?token=${trackingToken}`;
         } else {
             headers['Authorization'] = `Bearer ${token}`;
@@ -41,41 +55,88 @@ export const OrderStatus = () => {
         arrive: 'bg-green-100 text-green-800'
     };
 
+    const formatIDR = (n) => `Rp ${(n ?? 0).toLocaleString('id-ID')}`;
+
     return (
-        <div className="max-w-2xl mx-auto p-4 mt-8">
-            <h1 className="text-2xl font-bold mb-4">Order #{transaction.id}</h1>
+        <div className="max-w-3xl mx-auto p-6 mt-8 animate-in fade-in duration-500">
+            <h1 className="text-3xl font-serif mb-8 text-center">Order #{transaction.id}</h1>
             
-            <div className="bg-white shadow p-6 rounded mb-6">
-                <div className="flex justify-between items-center mb-4">
-                    <h2 className="text-lg font-semibold">Payment Status</h2>
-                    <span className={`px-3 py-1 rounded-full font-bold ${transaction.status === 'PAID' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>{transaction.status}</span>
+            <div className="grid md:grid-cols-2 gap-8 mb-8">
+                <div className="bg-gray-50 border border-gallery-stone p-6">
+                    <h2 className="text-sm font-bold uppercase tracking-widest border-b border-gallery-stone pb-2 mb-4">Status</h2>
+                    
+                    <div className="space-y-4">
+                        <div className="flex justify-between items-center">
+                            <span className="text-xs text-gallery-subtle uppercase tracking-widest">Payment</span>
+                            <span className={`text-[10px] px-2 py-0.5 rounded-full uppercase tracking-widest font-bold ${transaction.status === 'PAID' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
+                                {transaction.status}
+                            </span>
+                        </div>
+                        
+                        <div className="flex justify-between items-center">
+                            <span className="text-xs text-gallery-subtle uppercase tracking-widest">Shipping</span>
+                            <span className={`text-[10px] px-2 py-0.5 rounded-full uppercase tracking-widest font-bold ${statusColors[transaction.shipping_status] || 'bg-gray-100'}`}>
+                                {transaction.shipping_status}
+                            </span>
+                        </div>
+
+                        {transaction.shipping_status === 'shipping' && (
+                            <div className="pt-4 mt-4 border-t border-gallery-stone">
+                                <p className="text-xs text-gallery-subtle mb-1">Courier: <span className="font-bold text-gallery-ink">{transaction.shipping_courier}</span> ({transaction.shipping_method})</p>
+                                <p className="text-xs text-gallery-subtle flex items-center gap-2">
+                                    Tracking: 
+                                    <span className="font-mono bg-white border border-gallery-stone px-2 py-1 select-all font-bold text-gallery-ink">
+                                        {transaction.tracking_number}
+                                    </span>
+                                </p>
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                <div className="bg-gray-50 border border-gallery-stone p-6">
+                    <h2 className="text-sm font-bold uppercase tracking-widest border-b border-gallery-stone pb-2 mb-4">Shipping Info</h2>
+                    <div className="space-y-1 text-sm text-gallery-subtle">
+                        <p className="font-bold text-gallery-ink">{transaction.customer_name}</p>
+                        <p>{transaction.customer_phone}</p>
+                        <p className="mt-2">{transaction.shipping_address}</p>
+                        <p>{transaction.shipping_city}, {transaction.shipping_postal_code}</p>
+                        {transaction.guest_email && <p className="mt-2 text-xs">Email: {transaction.guest_email}</p>}
+                    </div>
+                </div>
+            </div>
+            
+            <div className="bg-gray-50 border border-gallery-stone p-6 mb-8">
+                <h2 className="text-sm font-bold uppercase tracking-widest border-b border-gallery-stone pb-2 mb-4">Items</h2>
+                <div className="space-y-4 mb-6">
+                    {transaction.items?.map(item => (
+                        <div key={item.id} className="flex justify-between text-sm">
+                            <span className="font-serif text-lg">{item.product_name} <span className="font-sans text-xs text-gallery-subtle ml-2">x{item.quantity}</span></span>
+                            <span className="font-bold">{formatIDR(item.price * item.quantity)}</span>
+                        </div>
+                    ))}
                 </div>
                 
-                <div className="flex justify-between items-center">
-                    <h2 className="text-lg font-semibold">Shipping Status</h2>
-                    <span className={`px-3 py-1 rounded-full font-bold ${statusColors[transaction.shipping_status] || 'bg-gray-100'}`}>
-                        {transaction.shipping_status.toUpperCase()}
-                    </span>
-                </div>
-
-                {transaction.shipping_status === 'shipping' && (
-                    <div className="mt-4 pt-4 border-t border-gray-200">
-                        <p className="text-sm text-gray-600 mb-1">Pengiriman via: <strong>{transaction.shipping_courier}</strong> ({transaction.shipping_method})</p>
-                        <p className="text-sm text-gray-600">Nomor Resi: <strong className="font-mono bg-gray-100 px-2 py-1 select-all">{transaction.tracking_number}</strong></p>
+                <div className="border-t border-gallery-stone pt-4 space-y-2 text-sm">
+                    <div className="flex justify-between text-gallery-subtle">
+                        <span>Subtotal</span>
+                        <span>{formatIDR(transaction.total_amount - transaction.shipping_cost)}</span>
                     </div>
-                )}
+                    <div className="flex justify-between text-gallery-subtle">
+                        <span>Shipping</span>
+                        <span>{formatIDR(transaction.shipping_cost)}</span>
+                    </div>
+                    <div className="flex justify-between font-serif text-xl mt-4 pt-4 border-t border-gallery-stone text-gallery-ink">
+                        <span>Total</span>
+                        <span>{formatIDR(transaction.total_amount)}</span>
+                    </div>
+                </div>
             </div>
 
-            <div className="bg-white shadow p-6 rounded">
-                <h3 className="font-bold mb-2">Shipping Details</h3>
-                <p>{transaction.customer_name}</p>
-                <p>{transaction.shipping_address}</p>
-                <p>{transaction.shipping_city}, {transaction.shipping_postal_code}</p>
-                <p>{transaction.customer_phone}</p>
-            </div>
-            
-            <div className="mt-6 text-center">
-                <Link to="/" className="text-blue-600 hover:underline">Return to Home</Link>
+            <div className="text-center">
+                <Link to="/" className="text-xs font-bold uppercase tracking-widest text-gallery-subtle hover:text-gallery-ink transition-colors pb-1 border-b border-transparent hover:border-gallery-ink">
+                    &larr; Back to Store
+                </Link>
             </div>
         </div>
     );

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { toast } from 'sonner';
 import api from '../lib/axios';
 
 export function AdminProducts() {
@@ -7,23 +8,28 @@ export function AdminProducts() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [editing, setEditing] = useState(null);
-  const [error, setError] = useState('');
+  const [page, setPage] = useState(1);
+  const [lastPage, setLastPage] = useState(1);
+  const [total, setTotal] = useState(0);
   const [form, setForm] = useState({
     category_id: '', name: '', description: '', price: '', stock: '', image_url: '', hover_image_url: ''
   });
 
-  useEffect(() => { fetchData(); }, []);
+  useEffect(() => { fetchData(page); }, [page]);
 
-  const fetchData = async () => {
+  const fetchData = async (page) => {
     try {
       const [prodRes, catRes] = await Promise.all([
-        api.get('/admin/products'),
+        api.get(`/admin/products?page=${page}`),
         api.get('/admin/categories')
       ]);
       setProducts(prodRes.data.data);
+      setPage(prodRes.data.current_page);
+      setLastPage(prodRes.data.last_page);
+      setTotal(prodRes.data.total);
       setCategories(catRes.data.data);
     } catch {
-      setError('Failed to load data');
+      toast.error('Failed to load data');
     } finally {
       setLoading(false);
     }
@@ -34,24 +40,24 @@ export function AdminProducts() {
   const resetForm = () => {
     setForm(emptyForm);
     setEditing(null);
-    setError('');
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSaving(true);
-    setError('');
     const payload = { ...form, price: parseFloat(form.price), stock: parseInt(form.stock, 10) };
     try {
       if (editing) {
         await api.put(`/admin/products/${editing}`, payload);
+        toast.success('Product updated successfully');
       } else {
         await api.post('/admin/products', payload);
+        toast.success('Product created successfully');
       }
       resetForm();
-      fetchData();
+      fetchData(editing ? page : 1);
     } catch (err) {
-      setError(err.response?.data?.message || 'Save failed');
+      toast.error(err.response?.data?.message || 'Save failed');
     } finally {
       setSaving(false);
     }
@@ -66,13 +72,35 @@ export function AdminProducts() {
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm('Delete this product?')) return;
-    try {
-      await api.delete(`/admin/products/${id}`);
-      fetchData();
-    } catch (err) {
-      setError(err.response?.data?.message || 'Delete failed');
-    }
+    toast.custom((t) => (
+      <div className="bg-gallery-white border border-gallery-stone p-4 flex flex-col gap-4">
+        <p className="text-sm">Delete this product?</p>
+        <div className="flex gap-2 justify-end">
+          <button 
+            className="text-xs uppercase tracking-widest text-gallery-subtle hover:text-gallery-ink transition-colors"
+            onClick={() => toast.dismiss(t)}
+          >
+            Cancel
+          </button>
+          <button 
+            className="text-xs uppercase tracking-widest text-red-600 hover:text-red-800 transition-colors"
+            onClick={async () => {
+              toast.dismiss(t);
+              try {
+                await api.delete(`/admin/products/${id}`);
+                toast.success('Product deleted successfully');
+                if (page > 1 && products.length === 1) fetchData(page - 1);
+                else fetchData(page);
+              } catch (err) {
+                toast.error(err.response?.data?.message || 'Delete failed');
+              }
+            }}
+          >
+            Delete
+          </button>
+        </div>
+      </div>
+    ));
   };
 
   if (loading) return <div className="text-sm tracking-widest uppercase text-gallery-subtle">Loading...</div>;
@@ -80,10 +108,6 @@ export function AdminProducts() {
   return (
     <div className="animate-in fade-in duration-500 max-w-6xl">
       <h1 className="text-3xl font-serif mb-12">Products</h1>
-
-      {error && (
-        <div className="bg-red-50 text-red-800 border border-red-200 p-4 mb-8 text-sm">{error}</div>
-      )}
 
       <form onSubmit={handleSubmit} className="bg-gallery-white border border-gallery-stone p-8 mb-12">
         <h2 className="text-xl font-serif mb-6">{editing ? 'Edit Product' : 'New Product'}</h2>
@@ -211,6 +235,30 @@ export function AdminProducts() {
             )}
           </tbody>
         </table>
+        {lastPage > 1 && (
+          <div className="flex items-center justify-between px-6 py-4 border-t border-gallery-stone">
+            <span className="text-xs text-gallery-subtle">
+              Showing {Number(products.length)} of {total} products
+            </span>
+            <div className="flex items-center gap-4">
+              <button
+                onClick={() => fetchData(page - 1)}
+                disabled={page <= 1}
+                className="text-xs uppercase tracking-widest text-gallery-ink hover:underline disabled:opacity-40 disabled:cursor-default"
+              >
+                ← Prev
+              </button>
+              <span className="text-xs text-gallery-subtle">Page {page} / {lastPage}</span>
+              <button
+                onClick={() => fetchData(page + 1)}
+                disabled={page >= lastPage}
+                className="text-xs uppercase tracking-widest text-gallery-ink hover:underline disabled:opacity-40 disabled:cursor-default"
+              >
+                Next →
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

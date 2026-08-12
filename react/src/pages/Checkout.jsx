@@ -1,17 +1,26 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
 import { useCartStore } from '../store/cart';
 import api from '../lib/axios';
+import { getCountries, getStatesOfCountry, getCitiesOfState } from '@countrystatecity/countries-browser';
 
 const SHIPPING_COST = 25000;
 const formatIDR = (n) => `Rp ${(n ?? 0).toLocaleString('id-ID')}`;
 
 export const Checkout = () => {
   const navigate = useNavigate();
-  const { items, clearCart } = useCartStore();
-  const [phase, setPhase] = useState('loading'); // loading | choose | register | login | form | confirm
-  const [isGuest, setIsGuest] = useState(false);
-  const [error, setError] = useState('');
+  const { items } = useCartStore();
+  const [phase, setPhase] = useState('loading'); // loading | register | login | form | confirm
+  const [isGuest, setIsGuest] = useState(true);
+
+  // Dynamic location lists from @countrystatecity/countries-browser
+  const [countries, setCountries] = useState([]);
+  const [states, setStates] = useState([]);
+  const [cities, setCities] = useState([]);
+
+  const [selectedCountryIso, setSelectedCountryIso] = useState('ID');
+  const [selectedStateIso, setSelectedStateIso] = useState('');
 
   // Register
   const [regData, setRegData] = useState({ name: '', email: '', password: '' });
@@ -27,9 +36,42 @@ export const Checkout = () => {
     guest_email: '',
     customer_phone: '',
     shipping_address: '',
+    shipping_country: 'Indonesia',
+    shipping_province: '',
     shipping_city: '',
+    shipping_sub_district: '',
     shipping_postal_code: '',
   });
+
+  // Load Countries on mount
+  useEffect(() => {
+    getCountries().then(list => {
+      setCountries(list);
+    });
+  }, []);
+
+  // Load States when Country changes
+  useEffect(() => {
+    if (selectedCountryIso) {
+      getStatesOfCountry(selectedCountryIso).then(list => {
+        setStates(list);
+      });
+    } else {
+      setStates([]);
+    }
+    setCities([]);
+  }, [selectedCountryIso]);
+
+  // Load Cities when State changes
+  useEffect(() => {
+    if (selectedCountryIso && selectedStateIso) {
+      getCitiesOfState(selectedCountryIso, selectedStateIso).then(list => {
+        setCities(list);
+      });
+    } else {
+      setCities([]);
+    }
+  }, [selectedCountryIso, selectedStateIso]);
 
   useEffect(() => {
     if (items.length === 0) { navigate('/cart'); return; }
@@ -44,30 +86,71 @@ export const Checkout = () => {
             guest_email: u.email || '',
             customer_phone: u.phone || '',
             shipping_address: u.address || '',
+            shipping_country: u.country || 'Indonesia',
+            shipping_province: u.province || '',
             shipping_city: u.city || '',
+            shipping_sub_district: u.sub_district || '',
             shipping_postal_code: u.postal_code || '',
           }));
+          setIsGuest(false);
           setPhase('form');
         })
         .catch(() => {
           localStorage.removeItem('token');
-          setPhase('choose');
+          setIsGuest(true);
+          setPhase('form');
         });
     } else {
       const saved = localStorage.getItem('guest_checkout_data');
       if (saved) {
         try { setFormData(prev => ({ ...prev, ...JSON.parse(saved) })); } catch { /* ignore */ }
       }
-      setPhase('choose');
+      setIsGuest(true);
+      setPhase('form');
     }
-  }, []);
+  }, [items.length, navigate]);
+
+  const handleCountrySelect = (e) => {
+    const iso2 = e.target.value;
+    setSelectedCountryIso(iso2);
+    setSelectedStateIso('');
+    const cObj = countries.find(c => c.iso2 === iso2);
+    setFormData(prev => ({
+      ...prev,
+      shipping_country: cObj ? cObj.name : iso2,
+      shipping_province: '',
+      shipping_city: '',
+      shipping_sub_district: ''
+    }));
+  };
+
+  const handleStateSelect = (e) => {
+    const sIso = e.target.value;
+    setSelectedStateIso(sIso);
+    const sObj = states.find(s => s.iso2 === sIso);
+    setFormData(prev => ({
+      ...prev,
+      shipping_province: sObj ? sObj.name : sIso,
+      shipping_city: '',
+      shipping_sub_district: ''
+    }));
+  };
+
+  const handleCitySelect = (e) => {
+    const cName = e.target.value;
+    setFormData(prev => ({
+      ...prev,
+      shipping_city: cName,
+      shipping_sub_district: ''
+    }));
+  };
 
   const handleChange = e => setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
   const handleRegChange = e => setRegData(prev => ({ ...prev, [e.target.name]: e.target.value }));
   const handleLoginChange = e => setLoginData(prev => ({ ...prev, [e.target.name]: e.target.value }));
 
   const doRegister = async e => {
-    e.preventDefault(); setRegLoading(true); setError('');
+    e.preventDefault(); setRegLoading(true);
     try {
       const res = await api.post('/register', regData);
       localStorage.setItem('token', res.data.access_token);
@@ -76,14 +159,16 @@ export const Checkout = () => {
         customer_name: u.name || '',
         guest_email: u.email || '',
       }));
+      setIsGuest(false);
+      toast.success('Registration successful');
       setPhase('form');
     } catch (err) {
-      setError(err.response?.data?.message || err.response?.data?.errors?.email?.[0] || 'Registration failed');
+      toast.error(err.response?.data?.message || err.response?.data?.errors?.email?.[0] || 'Registration failed');
     } finally { setRegLoading(false); }
   };
 
   const doLogin = async e => {
-    e.preventDefault(); setLoginLoading(true); setError('');
+    e.preventDefault(); setLoginLoading(true);
     try {
       const res = await api.post('/login', loginData);
       localStorage.setItem('token', res.data.access_token);
@@ -96,9 +181,11 @@ export const Checkout = () => {
         shipping_city: u.city || '',
         shipping_postal_code: u.postal_code || '',
       }));
+      setIsGuest(false);
+      toast.success('Login successful');
       setPhase('form');
     } catch (err) {
-      setError(err.response?.data?.message || err.response?.data?.errors?.email?.[0] || 'Login failed');
+      toast.error(err.response?.data?.message || err.response?.data?.errors?.email?.[0] || 'Login failed');
     } finally { setLoginLoading(false); }
   };
 
@@ -112,7 +199,6 @@ export const Checkout = () => {
   const doCheckout = async () => {
     if (isSubmitting) return;
     setIsSubmitting(true);
-    setError('');
     const payload = { items, ...formData };
     // don't send guest_email for logged-in users
     if (!isGuest) delete payload.guest_email;
@@ -120,16 +206,19 @@ export const Checkout = () => {
     try {
       const res = await api.post('/checkout', payload);
       if (res.data.invoice_url) {
-        localStorage.removeItem('last_guest_transaction');
-        localStorage.removeItem('last_guest_tracking_token');
         if (isGuest && res.data.tracking_token) {
-          localStorage.setItem('last_guest_transaction', res.data.transaction_id);
-          localStorage.setItem('last_guest_tracking_token', res.data.tracking_token);
+          const newOrder = {
+            id: res.data.transaction_id,
+            token: res.data.tracking_token,
+            date: new Date().toISOString()
+          };
+          const existing = JSON.parse(localStorage.getItem('guest_orders') || '[]');
+          localStorage.setItem('guest_orders', JSON.stringify([newOrder, ...existing]));
         }
         window.location.href = res.data.invoice_url;
       }
     } catch (err) {
-      setError(err.response?.data?.message || err.response?.data?.errors ? Object.values(err.response.data.errors).flat().join(', ') : 'Checkout failed');
+      toast.error(err.response?.data?.message || err.response?.data?.errors ? Object.values(err.response.data.errors).flat().join(', ') : 'Checkout failed');
       setIsSubmitting(false);
     }
   };
@@ -139,7 +228,7 @@ export const Checkout = () => {
   // ── LOADING ──
   if (phase === 'loading') return <div className="max-w-2xl mx-auto p-8 mt-8 text-center animate-in fade-in duration-500"><p className="text-gallery-subtle">Loading...</p></div>;
 
-  // ── AUTH CHOOSER ──
+  // ── AUTH CHOOSER (legacy) ──
   if (phase === 'choose') return (
     <div className="max-w-2xl mx-auto p-6 mt-8 animate-in fade-in duration-500">
       <h1 className="text-3xl font-serif mb-4 text-center">Checkout</h1>
@@ -157,9 +246,8 @@ export const Checkout = () => {
   // ── REGISTER ──
   if (phase === 'register') return (
     <div className="max-w-md mx-auto p-6 mt-8 animate-in fade-in duration-500">
-      <button onClick={() => setPhase('choose')} className="text-sm text-gallery-subtle mb-6 hover:text-gallery-ink">&larr; Back</button>
+      <button onClick={() => setPhase('form')} className="text-sm text-gallery-subtle mb-6 hover:text-gallery-ink">&larr; Back to Guest Checkout</button>
       <h1 className="text-2xl font-serif mb-6">Create Account</h1>
-      {error && <div className="bg-red-50 text-red-800 p-3 mb-4 text-sm border border-red-200">{error}</div>}
       <form onSubmit={doRegister} className="space-y-4">
         <div>
           <label className="block text-xs uppercase tracking-widest text-gallery-subtle mb-2">Name</label>
@@ -175,15 +263,17 @@ export const Checkout = () => {
         </div>
         <button type="submit" disabled={regLoading} className="w-full bg-gallery-ink text-white py-3 font-bold uppercase tracking-widest text-sm disabled:opacity-70">{regLoading ? 'Creating...' : 'Register & Continue'}</button>
       </form>
+      <div className="mt-6 text-center text-sm text-gallery-subtle">
+        Already have an account? <button type="button" onClick={() => setPhase('login')} className="text-gallery-ink font-bold hover:underline">Login</button>
+      </div>
     </div>
   );
 
   // ── LOGIN ──
   if (phase === 'login') return (
     <div className="max-w-md mx-auto p-6 mt-8 animate-in fade-in duration-500">
-      <button onClick={() => setPhase('choose')} className="text-sm text-gallery-subtle mb-6 hover:text-gallery-ink">&larr; Back</button>
+      <button onClick={() => setPhase('form')} className="text-sm text-gallery-subtle mb-6 hover:text-gallery-ink">&larr; Back to Guest Checkout</button>
       <h1 className="text-2xl font-serif mb-6">Login</h1>
-      {error && <div className="bg-red-50 text-red-800 p-3 mb-4 text-sm border border-red-200">{error}</div>}
       <form onSubmit={doLogin} className="space-y-4">
         <div>
           <label className="block text-xs uppercase tracking-widest text-gallery-subtle mb-2">Email</label>
@@ -195,6 +285,9 @@ export const Checkout = () => {
         </div>
         <button type="submit" disabled={loginLoading} className="w-full bg-gallery-ink text-white py-3 font-bold uppercase tracking-widest text-sm disabled:opacity-70">{loginLoading ? 'Logging in...' : 'Login & Continue'}</button>
       </form>
+      <div className="mt-6 text-center text-sm text-gallery-subtle">
+        Don't have an account? <button type="button" onClick={() => setPhase('register')} className="text-gallery-ink font-bold hover:underline">Register</button>
+      </div>
     </div>
   );
 
@@ -204,18 +297,18 @@ export const Checkout = () => {
       <div className="flex-1">
         <h1 className="text-3xl font-serif mb-8">Shipping Details</h1>
         {isGuest && (
-          <div className="bg-gallery-stone/30 p-4 mb-8 text-sm flex justify-between items-center">
-            <span className="text-gallery-subtle">Checking out as guest.</span>
-            <button onClick={() => setPhase('choose')} className="underline font-bold hover:text-gallery-ink">Change</button>
+          <div className="bg-gallery-stone/20 p-4 mb-8 text-sm flex flex-col sm:flex-row justify-between items-center gap-2 border border-gallery-stone/40">
+            <span className="text-gallery-subtle">Already have an account?</span>
+            <button onClick={() => setPhase('login')} className="underline font-bold hover:text-gallery-ink">Login</button>
           </div>
         )}
         {!isGuest && (
           <div className="bg-green-50 p-4 mb-8 text-sm text-green-800 flex justify-between items-center border border-green-100">
             <span>Logged in</span>
-            <button onClick={() => { localStorage.removeItem('token'); setPhase('choose'); }} className="underline font-bold">Logout</button>
+            <button onClick={() => { localStorage.removeItem('token'); setIsGuest(true); }} className="underline font-bold">Logout</button>
           </div>
         )}
-        {error && <div className="bg-red-50 text-red-800 p-4 mb-8 border border-red-200 text-sm">{error}</div>}
+        
         <form onSubmit={submitShipping} className="space-y-6">
           <div className="space-y-4">
             <h2 className="text-sm tracking-widest uppercase font-bold border-b pb-2">Contact</h2>
@@ -236,15 +329,73 @@ export const Checkout = () => {
           </div>
           <div className="space-y-4 pt-4">
             <h2 className="text-sm tracking-widest uppercase font-bold border-b pb-2">Shipping Address</h2>
+            
+            <div>
+              <label className="block text-xs text-gallery-subtle mb-1">Country *</label>
+              <select 
+                value={selectedCountryIso} 
+                onChange={handleCountrySelect}
+                className="w-full border-b border-gallery-stone py-2 bg-transparent focus:outline-none focus:border-gallery-ink"
+              >
+                <option value="">Select Country</option>
+                {countries.map(c => (
+                  <option key={c.iso2} value={c.iso2}>{c.emoji ? `${c.emoji} ` : ''}{c.name}</option>
+                ))}
+              </select>
+            </div>
+
             <div>
               <label className="block text-xs text-gallery-subtle mb-1">Address *</label>
               <textarea name="shipping_address" value={formData.shipping_address} onChange={handleChange} required className="w-full border-b border-gallery-stone py-2 focus:outline-none focus:border-gallery-ink resize-none" rows="2" />
             </div>
-            <div className="grid grid-cols-2 gap-4">
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs text-gallery-subtle mb-1">City *</label>
-                <input name="shipping_city" value={formData.shipping_city} onChange={handleChange} required className="w-full border-b border-gallery-stone py-2 focus:outline-none focus:border-gallery-ink" />
+                <label className="block text-xs text-gallery-subtle mb-1">State / Province *</label>
+                {states.length > 0 ? (
+                  <select 
+                    value={selectedStateIso} 
+                    onChange={handleStateSelect}
+                    required
+                    className="w-full border-b border-gallery-stone py-2 bg-transparent focus:outline-none focus:border-gallery-ink"
+                  >
+                    <option value="">Select State / Province</option>
+                    {states.map(s => (
+                      <option key={s.iso2} value={s.iso2}>{s.name}</option>
+                    ))}
+                  </select>
+                ) : (
+                  <input name="shipping_province" value={formData.shipping_province} onChange={handleChange} required className="w-full border-b border-gallery-stone py-2 focus:outline-none focus:border-gallery-ink" placeholder="State / Province" />
+                )}
               </div>
+
+              <div>
+                <label className="block text-xs text-gallery-subtle mb-1">City / Regency *</label>
+                {cities.length > 0 ? (
+                  <select 
+                    name="shipping_city"
+                    value={formData.shipping_city} 
+                    onChange={handleCitySelect}
+                    required
+                    className="w-full border-b border-gallery-stone py-2 bg-transparent focus:outline-none focus:border-gallery-ink"
+                  >
+                    <option value="">Select City / Regency</option>
+                    {cities.map(c => (
+                      <option key={c.id || c.name} value={c.name}>{c.name}</option>
+                    ))}
+                  </select>
+                ) : (
+                  <input name="shipping_city" value={formData.shipping_city} onChange={handleChange} required className="w-full border-b border-gallery-stone py-2 focus:outline-none focus:border-gallery-ink" placeholder="City / Regency" />
+                )}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs text-gallery-subtle mb-1">Sub-district / District *</label>
+                <input name="shipping_sub_district" value={formData.shipping_sub_district} onChange={handleChange} required className="w-full border-b border-gallery-stone py-2 focus:outline-none focus:border-gallery-ink" placeholder="Sub-district / District" />
+              </div>
+
               <div>
                 <label className="block text-xs text-gallery-subtle mb-1">Postal Code *</label>
                 <input name="shipping_postal_code" value={formData.shipping_postal_code} onChange={handleChange} required className="w-full border-b border-gallery-stone py-2 focus:outline-none focus:border-gallery-ink" />
@@ -282,15 +433,15 @@ export const Checkout = () => {
   return (
     <div className="max-w-3xl mx-auto p-6 mt-8 animate-in fade-in duration-500">
       <h1 className="text-3xl font-serif mb-8 text-center">Confirm Your Order</h1>
-      {error && <div className="bg-red-50 text-red-800 p-4 mb-8 border border-red-200 text-sm">{error}</div>}
+      
 
       <div className="bg-gray-50 p-6 mb-8 space-y-2 text-sm">
         <h2 className="font-bold border-b pb-2 mb-3">Contact & Shipping</h2>
         <p><span className="text-gallery-subtle">Name:</span> {formData.customer_name}</p>
-        <p><span className="text-gallery-subtle">Email:</span> {isGuest ? formData.guest_email : formData.guest_email}</p>
+        <p><span className="text-gallery-subtle">Email:</span> {formData.guest_email}</p>
         <p><span className="text-gallery-subtle">Phone:</span> {formData.customer_phone}</p>
         <p><span className="text-gallery-subtle">Address:</span> {formData.shipping_address}</p>
-        <p><span className="text-gallery-subtle">City:</span> {formData.shipping_city} &mdash; {formData.shipping_postal_code}</p>
+        <p><span className="text-gallery-subtle">Location:</span> {[formData.shipping_sub_district, formData.shipping_city, formData.shipping_province, formData.shipping_country].filter(Boolean).join(', ')} &mdash; {formData.shipping_postal_code}</p>
       </div>
 
       <div className="bg-gray-50 p-6 mb-8 space-y-2 text-sm">

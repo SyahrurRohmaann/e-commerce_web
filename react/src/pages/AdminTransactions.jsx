@@ -1,26 +1,30 @@
 import { useState, useEffect } from 'react';
+import { toast } from 'sonner';
 import api from '../lib/axios';
 
 export function AdminTransactions() {
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
   const [selectedTx, setSelectedTx] = useState(null);
+  const [page, setPage] = useState(1);
+  const [lastPage, setLastPage] = useState(1);
+  const [total, setTotal] = useState(0);
 
-  useEffect(() => { fetchTransactions(); }, []);
+  useEffect(() => { fetchTransactions(page); }, [page]);
 
-  const fetchTransactions = async () => {
+  const fetchTransactions = async (page) => {
     try {
-      const res = await api.get('/admin/transactions');
+      const res = await api.get(`/admin/transactions?page=${page}`);
       setTransactions(res.data.data);
+      setPage(res.data.current_page);
+      setLastPage(res.data.last_page);
+      setTotal(res.data.total);
     } catch {
-      setError('Failed to load transactions');
+      toast.error('Failed to load transactions');
     } finally {
       setLoading(false);
     }
   };
-
-  const [updateError, setUpdateError] = useState('');
   
   const [paymentStatus, setPaymentStatus] = useState('PENDING');
   const [shippingStatus, setShippingStatus] = useState('pending');
@@ -30,7 +34,6 @@ export function AdminTransactions() {
 
   const loadDetail = async (id) => {
     try {
-      setUpdateError('');
       const res = await api.get(`/admin/transactions/${id}`);
       const tx = res.data.data;
       setSelectedTx(tx);
@@ -40,13 +43,12 @@ export function AdminTransactions() {
       setShippingCourier(tx.shipping_courier || '');
       setTrackingNumber(tx.tracking_number || '');
     } catch {
-      alert('Failed to load transaction details');
+      toast.error('Failed to load transaction details');
     }
   };
 
   const updateStatus = async (e) => {
     e.preventDefault();
-    setUpdateError('');
     try {
       const payload = { 
         status: paymentStatus,
@@ -60,11 +62,11 @@ export function AdminTransactions() {
       }
       
       const res = await api.put(`/admin/transactions/${selectedTx.id}/status`, payload);
-      alert('Status updated successfully');
+      toast.success('Status updated successfully');
       loadDetail(selectedTx.id);
-      fetchTransactions();
+      fetchTransactions(page);
     } catch (err) {
-      setUpdateError(err.response?.data?.message || err.response?.data?.errors ? Object.values(err.response.data.errors).flat().join(', ') : 'Failed to update status');
+      toast.error(err.response?.data?.message || err.response?.data?.errors ? Object.values(err.response.data.errors).flat().join(', ') : 'Failed to update status');
     }
   };
 
@@ -73,10 +75,6 @@ export function AdminTransactions() {
   return (
     <div className="animate-in fade-in duration-500 max-w-6xl">
       <h1 className="text-3xl font-serif mb-12">Transactions</h1>
-
-      {error && (
-        <div className="bg-red-50 text-red-800 border border-red-200 p-4 mb-8 text-sm">{error}</div>
-      )}
 
       {selectedTx ? (
         <div className="bg-gallery-white border border-gallery-stone p-8">
@@ -144,9 +142,6 @@ export function AdminTransactions() {
 
           <div className="pt-8 border-t border-gallery-stone">
             <h3 className="text-xs uppercase tracking-widest text-gallery-subtle mb-4">Update Order Status</h3>
-            {updateError && (
-              <div className="bg-red-50 text-red-800 border border-red-200 p-3 mb-4 text-sm">{updateError}</div>
-            )}
             <form onSubmit={updateStatus} className="bg-gallery-stone/10 p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
               
               {/* KOLOM 1: STATUS PEMBAYARAN */}
@@ -243,7 +238,8 @@ export function AdminTransactions() {
                 <th className="px-6 py-4 font-normal">Date</th>
                 <th className="px-6 py-4 font-normal">Customer</th>
                 <th className="px-6 py-4 font-normal">Amount</th>
-                <th className="px-6 py-4 font-normal">Status</th>
+                <th className="px-6 py-4 font-normal">Payment</th>
+                <th className="px-6 py-4 font-normal">Shipping</th>
                 <th className="px-6 py-4 font-normal text-right">Action</th>
               </tr>
             </thead>
@@ -263,6 +259,15 @@ export function AdminTransactions() {
                       {t.status}
                     </span>
                   </td>
+                  <td className="px-6 py-4">
+                    <span className={`px-2 py-1 text-[10px] tracking-widest uppercase rounded-sm ${
+                      t.shipping_status === 'arrive' ? 'bg-green-100 text-green-800' :
+                      t.shipping_status === 'shipping' ? 'bg-blue-100 text-blue-800' :
+                      'bg-gray-100 text-gray-800'
+                    }`}>
+                      {t.shipping_status}
+                    </span>
+                  </td>
                   <td className="px-6 py-4 text-right">
                     <button onClick={() => loadDetail(t.id)} className="text-xs uppercase tracking-widest text-blue-600 hover:underline">
                       View Details
@@ -271,10 +276,34 @@ export function AdminTransactions() {
                 </tr>
               ))}
               {transactions.length === 0 && (
-                <tr><td colSpan="6" className="px-6 py-8 text-center text-gallery-subtle text-xs uppercase tracking-widest">No transactions yet</td></tr>
+                <tr><td colSpan="7" className="px-6 py-8 text-center text-gallery-subtle text-xs uppercase tracking-widest">No transactions yet</td></tr>
               )}
             </tbody>
           </table>
+          {lastPage > 1 && (
+            <div className="flex items-center justify-between px-6 py-4 border-t border-gallery-stone">
+              <span className="text-xs text-gallery-subtle">
+                Showing {Number(transactions.length)} of {total} transactions
+              </span>
+              <div className="flex items-center gap-4">
+                <button
+                  onClick={() => fetchTransactions(page - 1)}
+                  disabled={page <= 1}
+                  className="text-xs uppercase tracking-widest text-gallery-ink hover:underline disabled:opacity-40 disabled:cursor-default"
+                >
+                  ← Prev
+                </button>
+                <span className="text-xs text-gallery-subtle">Page {page} / {lastPage}</span>
+                <button
+                  onClick={() => fetchTransactions(page + 1)}
+                  disabled={page >= lastPage}
+                  className="text-xs uppercase tracking-widest text-gallery-ink hover:underline disabled:opacity-40 disabled:cursor-default"
+                >
+                  Next →
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>

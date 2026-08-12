@@ -5,8 +5,12 @@ export function AdminLayout() {
   const role = localStorage.getItem('role');
   const location = useLocation();
 
-  if (!token || role !== 'admin') {
+  if (!token) {
     return <Navigate to="/login" replace />;
+  }
+  
+  if (role !== 'admin') {
+    return <Navigate to="/forbidden" replace />;
   }
 
   const handleLogout = () => {
@@ -32,6 +36,7 @@ export function AdminLayout() {
           <Link to="/admin/categories" className={navItemClass('/admin/categories')}>Categories</Link>
           <Link to="/admin/products" className={navItemClass('/admin/products')}>Products</Link>
           <Link to="/admin/transactions" className={navItemClass('/admin/transactions')}>Transactions</Link>
+          <Link to="/admin/hero-banners" className={navItemClass('/admin/hero-banners')}>Hero Banners</Link>
           <Link to="/" className="px-4 py-3 text-sm uppercase tracking-widest hover:bg-gallery-stone/50 transition-colors mt-8 border-t border-gallery-stone pt-6">Storefront</Link>
         </nav>
         <div className="p-4 border-t border-gallery-stone">

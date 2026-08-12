@@ -5,6 +5,8 @@ export function Dashboard() {
   const [categories, setCategories] = useState([]);
   const [products, setProducts] = useState([]);
   const [transactions, setTransactions] = useState([]);
+  const [totalOrders, setTotalOrders] = useState(0);
+  const [totalProducts, setTotalProducts] = useState(0);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -15,12 +17,14 @@ export function Dashboard() {
     try {
       const [catRes, prodRes, trxRes] = await Promise.all([
         api.get('/admin/categories'),
-        api.get('/admin/products'),
-        api.get('/admin/transactions')
+        api.get('/admin/products?per_page=100'),
+        api.get('/admin/transactions?per_page=100')
       ]);
       setCategories(catRes.data.data);
       setProducts(prodRes.data.data);
+      setTotalProducts(prodRes.data.total);
       setTransactions(trxRes.data.data);
+      setTotalOrders(trxRes.data.total);
     } catch (e) {
       console.error(e);
     } finally {
@@ -44,11 +48,11 @@ export function Dashboard() {
         </div>
         <div className="bg-gallery-white p-8 border border-gallery-stone">
           <p className="text-xs uppercase tracking-widest text-gallery-subtle mb-4">Total Orders</p>
-          <p className="text-3xl font-serif">{transactions.length}</p>
+          <p className="text-3xl font-serif">{totalOrders}</p>
         </div>
         <div className="bg-gallery-white p-8 border border-gallery-stone">
           <p className="text-xs uppercase tracking-widest text-gallery-subtle mb-4">Active Catalog</p>
-          <p className="text-3xl font-serif">{products.length}</p>
+          <p className="text-3xl font-serif">{totalProducts}</p>
         </div>
       </div>
 

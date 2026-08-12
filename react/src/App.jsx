@@ -1,20 +1,25 @@
 import { useEffect } from 'react';
 import Lenis from 'lenis';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { Toaster } from 'sonner';
 import { PublicLayout } from './layouts/PublicLayout';
 import { AdminLayout } from './layouts/AdminLayout';
 import { Home } from './pages/Home';
 import { Cart } from './pages/Cart';
 import { Checkout } from './pages/Checkout';
 import { Login } from './pages/Login';
+import { Register } from './pages/Register';
 import { Dashboard } from './pages/Dashboard';
 import { AdminCategories } from './pages/AdminCategories';
 import { AdminProducts } from './pages/AdminProducts';
 import { AdminTransactions } from './pages/AdminTransactions';
+import { AdminHeroBanners } from './pages/AdminHeroBanners';
 import { OrderStatus } from './pages/OrderStatus';
 import { CheckoutSuccess } from './pages/CheckoutSuccess';
 import { CheckoutFailure } from './pages/CheckoutFailure';
 import { Profile } from './pages/Profile';
+import { TrackOrder } from './pages/TrackOrder';
+import { Forbidden } from './pages/Forbidden';
 
 function App() {
   useEffect(() => {
@@ -34,6 +39,13 @@ function App() {
 
   return (
     <BrowserRouter>
+      <Toaster position="top-center" toastOptions={{
+        className: 'font-sans rounded-none border border-gallery-stone',
+        style: {
+          background: 'var(--color-gallery-white)',
+          color: 'var(--color-gallery-ink)',
+        },
+      }} />
       <Routes>
         <Route element={<PublicLayout />}>
           <Route path="/" element={<Home />} />
@@ -42,8 +54,12 @@ function App() {
           <Route path="/checkout/success" element={<CheckoutSuccess />} />
           <Route path="/checkout/failure" element={<CheckoutFailure />} />
           <Route path="/orders/:id" element={<OrderStatus />} />
+          <Route path="/order/:id" element={<OrderStatus />} />
           <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
           <Route path="/profile" element={<Profile />} />
+          <Route path="/track-order" element={<TrackOrder />} />
+          <Route path="/forbidden" element={<Forbidden />} />
         </Route>
         
         <Route element={<AdminLayout />}>
@@ -51,6 +67,7 @@ function App() {
           <Route path="/admin/categories" element={<AdminCategories />} />
           <Route path="/admin/products" element={<AdminProducts />} />
           <Route path="/admin/transactions" element={<AdminTransactions />} />
+          <Route path="/admin/hero-banners" element={<AdminHeroBanners />} />
         </Route>
       </Routes>
     </BrowserRouter>

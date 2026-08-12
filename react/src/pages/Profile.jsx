@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
 import api from '../lib/axios';
 
 export function Profile() {
@@ -13,11 +14,11 @@ export function Profile() {
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [message, setMessage] = useState('');
   const navigate = useNavigate();
 
   useEffect(() => {
     fetchProfile();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const fetchProfile = async () => {
@@ -45,15 +46,13 @@ export function Profile() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSaving(true);
-    setMessage('');
     
     try {
       const res = await api.put('/profile', formData);
       setUser(res.data.user);
-      setMessage('Profile updated successfully.');
-      setTimeout(() => setMessage(''), 3000);
-    } catch (err) {
-      setMessage('Failed to update profile.');
+      toast.success('Profile updated successfully.');
+    } catch {
+      toast.error('Failed to update profile.');
     } finally {
       setSaving(false);
     }
@@ -62,6 +61,7 @@ export function Profile() {
   const handleLogout = async () => {
     try {
       await api.post('/logout');
+      toast.success('Logged out successfully');
     } catch (err) {
       console.error('Logout error', err);
     } finally {
@@ -85,12 +85,6 @@ export function Profile() {
           Logout
         </button>
       </div>
-
-      {message && (
-        <div className={`p-4 mb-6 text-sm ${message.includes('success') ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-800'}`}>
-          {message}
-        </div>
-      )}
 
       <form onSubmit={handleSubmit} className="space-y-6">
         <div>

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { toast } from 'sonner';
 import api from '../lib/axios';
 
 export function AdminCategories() {
@@ -7,7 +8,6 @@ export function AdminCategories() {
   const [form, setForm] = useState({ name: '', description: '' });
   const [editing, setEditing] = useState(null);
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState('');
 
   useEffect(() => { fetchCategories(); }, []);
 
@@ -16,7 +16,7 @@ export function AdminCategories() {
       const res = await api.get('/admin/categories');
       setCategories(res.data.data);
     } catch {
-      setError('Failed to load categories');
+      toast.error('Failed to load categories');
     } finally {
       setLoading(false);
     }
@@ -25,23 +25,23 @@ export function AdminCategories() {
   const resetForm = () => {
     setForm({ name: '', description: '' });
     setEditing(null);
-    setError('');
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSaving(true);
-    setError('');
     try {
       if (editing) {
         await api.put(`/admin/categories/${editing}`, form);
+        toast.success('Category updated successfully');
       } else {
         await api.post('/admin/categories', form);
+        toast.success('Category created successfully');
       }
       resetForm();
       fetchCategories();
     } catch (err) {
-      setError(err.response?.data?.message || 'Save failed');
+      toast.error(err.response?.data?.message || 'Save failed');
     } finally {
       setSaving(false);
     }
@@ -53,13 +53,34 @@ export function AdminCategories() {
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm('Delete this category?')) return;
-    try {
-      await api.delete(`/admin/categories/${id}`);
-      fetchCategories();
-    } catch (err) {
-      setError(err.response?.data?.message || 'Delete failed');
-    }
+    toast.custom((t) => (
+      <div className="bg-gallery-white border border-gallery-stone p-4 flex flex-col gap-4">
+        <p className="text-sm">Delete this category?</p>
+        <div className="flex gap-2 justify-end">
+          <button 
+            className="text-xs uppercase tracking-widest text-gallery-subtle hover:text-gallery-ink transition-colors"
+            onClick={() => toast.dismiss(t)}
+          >
+            Cancel
+          </button>
+          <button 
+            className="text-xs uppercase tracking-widest text-red-600 hover:text-red-800 transition-colors"
+            onClick={async () => {
+              toast.dismiss(t);
+              try {
+                await api.delete(`/admin/categories/${id}`);
+                toast.success('Category deleted successfully');
+                fetchCategories();
+              } catch (err) {
+                toast.error(err.response?.data?.message || 'Delete failed');
+              }
+            }}
+          >
+            Delete
+          </button>
+        </div>
+      </div>
+    ));
   };
 
   if (loading) return <div className="text-sm tracking-widest uppercase text-gallery-subtle">Loading...</div>;
@@ -67,10 +88,6 @@ export function AdminCategories() {
   return (
     <div className="animate-in fade-in duration-500 max-w-4xl">
       <h1 className="text-3xl font-serif mb-12">Categories</h1>
-
-      {error && (
-        <div className="bg-red-50 text-red-800 border border-red-200 p-4 mb-8 text-sm">{error}</div>
-      )}
 
       <form onSubmit={handleSubmit} className="bg-gallery-white border border-gallery-stone p-8 mb-12">
         <h2 className="text-xl font-serif mb-6">{editing ? 'Edit Category' : 'New Category'}</h2>
