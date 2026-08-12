@@ -2,16 +2,33 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Checkout Flow', () => {
   test.beforeEach(async ({ page }) => {
-    // Navigate to local dev server (assuming 5173 for Vite)
+    // Mock API catalog response so front-end renders without backend server
+    await page.route('**/api/catalog', async route => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          data: [
+            {
+              id: 1,
+              name: 'Signature Hoodie',
+              description: 'Designed for everyday movement.',
+              price: 150000,
+              stock: 10,
+              image_url: 'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f'
+            }
+          ]
+        })
+      });
+    });
+
     await page.goto('http://localhost:5173');
-    
-    // Clear localStorage to start fresh
     await page.evaluate(() => localStorage.clear());
   });
 
   test('Guest checkout flow end-to-end', async ({ page }) => {
     // 1. Add item to cart from home
-    const acquireBtn = page.getByRole('button', { name: /acquire/i }).first();
+    const acquireBtn = page.getByRole('button', { name: /shop the collection/i }).first();
     await expect(acquireBtn).toBeVisible({ timeout: 10000 });
     await acquireBtn.click();
 
@@ -30,13 +47,13 @@ test.describe('Checkout Flow', () => {
     await expect(page.getByText(/How would you like to continue/i)).toBeVisible();
     await page.getByRole('button', { name: /guest/i }).click();
 
-    // 6. Fill shipping form
-    await page.getByRole('textbox', { name: /full name/i }).fill('Test Guest');
-    await page.getByRole('textbox', { name: /email/i }).fill('guest@example.com');
-    await page.getByRole('textbox', { name: /phone/i }).fill('081234567890');
-    await page.getByRole('textbox', { name: /address/i }).fill('Jl. Test No. 123');
-    await page.getByRole('textbox', { name: /city/i }).fill('Jakarta');
-    await page.getByRole('textbox', { name: /postal code/i }).fill('12345');
+    // 6. Fill shipping form using CSS selectors by input name
+    await page.locator('input[name="customer_name"]').fill('Test Guest');
+    await page.locator('input[name="guest_email"]').fill('guest@example.com');
+    await page.locator('input[name="customer_phone"]').fill('081234567890');
+    await page.locator('textarea[name="shipping_address"]').fill('Jl. Test No. 123');
+    await page.locator('input[name="shipping_city"]').fill('Jakarta');
+    await page.locator('input[name="shipping_postal_code"]').fill('12345');
 
     // 7. Submit form -> go to Confirm phase
     await page.getByRole('button', { name: /review order/i }).click();
@@ -46,8 +63,6 @@ test.describe('Checkout Flow', () => {
     await expect(page.getByText(/Test Guest/i)).toBeVisible();
     await expect(page.getByText(/guest@example.com/i)).toBeVisible();
 
-    // Note: We don't click "Pay Now" because it hits Xendit API without real backend running / mocking.
-    // The presence of "Pay Now" button is sufficient to prove frontend flow works until submission.
     await expect(page.getByRole('button', { name: /pay now/i })).toBeVisible();
   });
 });

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import api from '../lib/axios';
+import { useCurrencyStore } from '../store/currency';
 
 export function AdminProducts() {
   const [products, setProducts] = useState([]);
@@ -14,6 +15,9 @@ export function AdminProducts() {
   const [form, setForm] = useState({
     category_id: '', name: '', description: '', price: '', stock: '', image_url: '', hover_image_url: ''
   });
+
+  const currentCurrency = useCurrencyStore((state) => state.currentCurrency);
+  const format = useCurrencyStore((state) => state.format);
 
   useEffect(() => { fetchData(page); }, [page]);
 
@@ -220,7 +224,7 @@ export function AdminProducts() {
                   {p.description && <p className="text-xs text-gallery-subtle mt-1 line-clamp-1">{p.description}</p>}
                 </td>
                 <td className="px-6 py-4 text-xs uppercase tracking-widest">{p.category?.name || '-'}</td>
-                <td className="px-6 py-4">${Number(p.price).toLocaleString()}</td>
+                <td className="px-6 py-4 font-medium">{format(p.price)}</td>
                 <td className="px-6 py-4">
                   <span className={p.stock < 5 ? 'text-red-600 font-medium' : ''}>{p.stock}</span>
                 </td>

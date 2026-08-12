@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import api from '../lib/axios';
+import { useCurrencyStore } from '../store/currency';
 
 export function Dashboard() {
   const [categories, setCategories] = useState([]);
@@ -8,6 +9,9 @@ export function Dashboard() {
   const [totalOrders, setTotalOrders] = useState(0);
   const [totalProducts, setTotalProducts] = useState(0);
   const [loading, setLoading] = useState(true);
+
+  const currentCurrency = useCurrencyStore((state) => state.currentCurrency);
+  const format = useCurrencyStore((state) => state.format);
 
   useEffect(() => {
     fetchData();
@@ -44,7 +48,7 @@ export function Dashboard() {
       <div className="grid grid-cols-3 gap-6 mb-16">
         <div className="bg-gallery-white p-8 border border-gallery-stone">
           <p className="text-xs uppercase tracking-widest text-gallery-subtle mb-4">Total Revenue</p>
-          <p className="text-3xl font-serif">${totalSales.toLocaleString()}</p>
+          <p className="text-3xl font-serif">{format(totalSales)}</p>
         </div>
         <div className="bg-gallery-white p-8 border border-gallery-stone">
           <p className="text-xs uppercase tracking-widest text-gallery-subtle mb-4">Total Orders</p>
@@ -76,7 +80,7 @@ export function Dashboard() {
                 {transactions.slice(0, 5).map(t => (
                   <tr key={t.id} className="hover:bg-gallery-stone/10 transition-colors">
                     <td className="px-6 py-4 font-mono text-xs">#{t.id.toString().padStart(4, '0')}</td>
-                    <td className="px-6 py-4">${Number(t.total_amount).toLocaleString()}</td>
+                    <td className="px-6 py-4 font-medium">{format(t.total_amount)}</td>
                     <td className="px-6 py-4">
                       <span className={`px-2 py-1 text-[10px] tracking-widest uppercase rounded-sm ${
                         t.status === 'PAID' ? 'bg-green-100 text-green-800' :
@@ -122,7 +126,7 @@ export function Dashboard() {
                       <p>{p.name}</p>
                       <p className="text-xs text-gallery-subtle uppercase tracking-widest mt-1">{p.category?.name}</p>
                     </td>
-                    <td className="px-6 py-4">${Number(p.price).toLocaleString()}</td>
+                    <td className="px-6 py-4 font-medium">{format(p.price)}</td>
                     <td className="px-6 py-4">
                       <span className={p.stock < 5 ? 'text-red-600 font-medium' : ''}>{p.stock}</span>
                     </td>

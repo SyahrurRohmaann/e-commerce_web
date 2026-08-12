@@ -1,0 +1,5 @@
+.claude/
+.opencode/
+node_modules/
+.graphify/
+docs/

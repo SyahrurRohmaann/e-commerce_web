@@ -1,10 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import api from '../lib/axios';
+import { useCurrencyStore } from '../store/currency';
 
 export const OrderStatus = () => {
     const { id } = useParams();
     const [transaction, setTransaction] = useState(null);
+    const currentCurrency = useCurrencyStore((state) => state.currentCurrency);
+    const format = useCurrencyStore((state) => state.format);
 
     useEffect(() => {
         const fetchOrder = async () => {
@@ -112,7 +115,7 @@ export const OrderStatus = () => {
                     {transaction.items?.map(item => (
                         <div key={item.id} className="flex justify-between text-sm">
                             <span className="font-serif text-lg">{item.product_name} <span className="font-sans text-xs text-gallery-subtle ml-2">x{item.quantity}</span></span>
-                            <span className="font-bold">{formatIDR(item.price * item.quantity)}</span>
+                            <span className="font-bold">{format(item.price * item.quantity)}</span>
                         </div>
                     ))}
                 </div>
@@ -120,15 +123,15 @@ export const OrderStatus = () => {
                 <div className="border-t border-gallery-stone pt-4 space-y-2 text-sm">
                     <div className="flex justify-between text-gallery-subtle">
                         <span>Subtotal</span>
-                        <span>{formatIDR(transaction.total_amount - transaction.shipping_cost)}</span>
+                        <span>{format(transaction.total_amount - transaction.shipping_cost)}</span>
                     </div>
                     <div className="flex justify-between text-gallery-subtle">
                         <span>Shipping</span>
-                        <span>{formatIDR(transaction.shipping_cost)}</span>
+                        <span>{format(transaction.shipping_cost)}</span>
                     </div>
                     <div className="flex justify-between font-serif text-xl mt-4 pt-4 border-t border-gallery-stone text-gallery-ink">
                         <span>Total</span>
-                        <span>{formatIDR(transaction.total_amount)}</span>
+                        <span>{format(transaction.total_amount)}</span>
                     </div>
                 </div>
             </div>

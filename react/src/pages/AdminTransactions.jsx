@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import api from '../lib/axios';
+import { useCurrencyStore } from '../store/currency';
 
 export function AdminTransactions() {
   const [transactions, setTransactions] = useState([]);
@@ -9,6 +10,9 @@ export function AdminTransactions() {
   const [page, setPage] = useState(1);
   const [lastPage, setLastPage] = useState(1);
   const [total, setTotal] = useState(0);
+
+  const currentCurrency = useCurrencyStore((state) => state.currentCurrency);
+  const format = useCurrencyStore((state) => state.format);
 
   useEffect(() => { fetchTransactions(page); }, [page]);
 
@@ -127,15 +131,15 @@ export function AdminTransactions() {
                 <tr key={item.id}>
                   <td className="py-4">{item.product_name}</td>
                   <td className="py-4 text-center">{item.quantity}</td>
-                  <td className="py-4 text-right">Rp {Number(item.price).toLocaleString('id-ID')}</td>
-                  <td className="py-4 text-right">Rp {(Number(item.price) * item.quantity).toLocaleString('id-ID')}</td>
+                  <td className="py-4 text-right">{format(item.price)}</td>
+                  <td className="py-4 text-right">{format(Number(item.price) * item.quantity)}</td>
                 </tr>
               ))}
             </tbody>
             <tfoot>
               <tr>
                 <td colSpan="3" className="py-4 text-right text-xs uppercase tracking-widest text-gallery-subtle">Total Amount</td>
-                <td className="py-4 text-right text-xl font-serif">Rp {Number(selectedTx.total_amount).toLocaleString('id-ID')}</td>
+                <td className="py-4 text-right text-xl font-serif">{format(selectedTx.total_amount)}</td>
               </tr>
             </tfoot>
           </table>
@@ -249,7 +253,7 @@ export function AdminTransactions() {
                   <td className="px-6 py-4 font-mono text-xs">#{t.id.toString().padStart(4, '0')}</td>
                   <td className="px-6 py-4 text-gallery-subtle text-xs">{new Date(t.created_at).toLocaleDateString()}</td>
                   <td className="px-6 py-4">{t.customer_name}</td>
-                  <td className="px-6 py-4">Rp {Number(t.total_amount).toLocaleString('id-ID')}</td>
+                  <td className="px-6 py-4 font-medium">{format(t.total_amount)}</td>
                   <td className="px-6 py-4">
                     <span className={`px-2 py-1 text-[10px] tracking-widest uppercase rounded-sm ${
                       t.status === 'PAID' ? 'bg-green-100 text-green-800' :

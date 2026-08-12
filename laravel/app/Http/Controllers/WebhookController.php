@@ -62,6 +62,15 @@ class WebhookController extends Controller
                         Product::where('id', $item->product_id)->decrement('stock', $item->quantity);
                     }
                 }
+
+                $email = $transaction->user ? $transaction->user->email : $transaction->guest_email;
+                if ($email) {
+                    try {
+                        \Illuminate\Support\Facades\Mail::to($email)->send(new \App\Mail\OrderPaymentSuccessMail($transaction));
+                    } catch (\Exception $e) {
+                        Log::error('Failed sending payment success email via Webhook: ' . $e->getMessage());
+                    }
+                }
             } elseif ($status === 'EXPIRED') {
                 $transaction->update($updateData);
             }

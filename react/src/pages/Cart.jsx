@@ -1,7 +1,6 @@
 import { useCartStore } from '../store/cart';
+import { useCurrencyStore } from '../store/currency';
 import { Link, useNavigate } from 'react-router-dom';
-
-const formatIDR = (n) => `Rp ${(n ?? 0).toLocaleString('id-ID')}`;
 
 function QtyControl({ qty, onChange }) {
   return (
@@ -15,6 +14,8 @@ function QtyControl({ qty, onChange }) {
 
 export function Cart() {
   const { items, removeItem, updateQuantity, clearCart } = useCartStore();
+  const currentCurrency = useCurrencyStore((state) => state.currentCurrency);
+  const format = useCurrencyStore((state) => state.format);
   const navigate = useNavigate();
 
   const total = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
@@ -44,7 +45,7 @@ export function Cart() {
                   <QtyControl qty={item.quantity} onChange={(q) => updateQuantity(item.product_id, q)} />
                 </div>
                 <div className="text-right flex items-center gap-8">
-                  <span className="text-lg">{formatIDR(item.price * item.quantity)}</span>
+                  <span className="text-lg">{format(item.price * item.quantity)}</span>
                   <button 
                     onClick={() => removeItem(item.product_id)}
                     className="text-xs uppercase tracking-widest text-gallery-subtle hover:text-red-600 transition-colors"
@@ -59,15 +60,15 @@ export function Cart() {
           <div className="flex flex-col items-end border-t border-gallery-stone pt-8">
             <div className="flex justify-between w-full md:w-1/2 mb-4 text-sm text-gallery-subtle">
               <span>Subtotal</span>
-              <span>{formatIDR(total)}</span>
+              <span>{format(total)}</span>
             </div>
             <div className="flex justify-between w-full md:w-1/2 mb-4 text-sm text-gallery-subtle">
               <span>Shipping</span>
-              <span>{formatIDR(25000)}</span>
+              <span>{format(25000)}</span>
             </div>
             <div className="flex justify-between w-full md:w-1/2 mb-8 text-2xl font-serif">
               <span>Total</span>
-              <span>{formatIDR(total + 25000)}</span>
+              <span>{format(total + 25000)}</span>
             </div>
             <button 
               onClick={handleCheckout} 

@@ -7,9 +7,27 @@ use Illuminate\Http\Request;
 
 class TransactionController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        return response()->json(['data' => Transaction::with(['user'])->get()]);
+        $perPage = min($request->integer('per_page', 15), 100) ?: 15;
+
+        return response()->json(Transaction::with(['user'])->orderBy('created_at', 'desc')->paginate($perPage));
+    }
+
+    public function userTransactions(Request $request)
+    {
+        $transactions = Transaction::with(['items'])->where('user_id', $request->user()->id)->orderBy('created_at', 'desc')->get();
+        return response()->json(['data' => $transactions]);
+    }
+
+    public function showUser(Request $request, Transaction $transaction)
+    {
+        if ($transaction->user_id !== $request->user()->id) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        $this->syncStatusWithXendit($transaction);
+        return response()->json(['data' => $transaction->load(['items'])]);
     }
 
     public function show(Transaction $transaction)
@@ -26,6 +44,24 @@ class TransactionController extends Controller
         }
 
         $transaction = Transaction::with(['items'])->where('id', $id)->where('tracking_token', $token)->first();
+        
+        if (!$transaction) {
+            return response()->json(['message' => 'Not found'], 404);
+        }
+        
+        $this->syncStatusWithXendit($transaction);
+
+        return response()->json(['data' => $transaction]);
+    }
+
+    public function trackGuest(Request $request)
+    {
+        $token = $request->query('token');
+        if (!$token) {
+            return response()->json(['message' => 'Tracking token required'], 400);
+        }
+
+        $transaction = Transaction::with(['items'])->where('tracking_token', $token)->first();
         
         if (!$transaction) {
             return response()->json(['message' => 'Not found'], 404);
@@ -70,6 +106,15 @@ class TransactionController extends Controller
                                 \App\Models\Product::where('id', $item->product_id)->decrement('stock', $item->quantity);
                             }
                         }
+
+                        $email = $transaction->user ? $transaction->user->email : $transaction->guest_email;
+                        if ($email) {
+                            try {
+                                \Illuminate\Support\Facades\Mail::to($email)->send(new \App\Mail\OrderPaymentSuccessMail($transaction));
+                            } catch (\Exception $e) {
+                                \Illuminate\Support\Facades\Log::error('Failed sending payment success email via sync: ' . $e->getMessage());
+                            }
+                        }
                     } elseif ($status === 'EXPIRED') {
                         $transaction->update($updateData);
                     }
@@ -98,6 +143,15 @@ class TransactionController extends Controller
                 foreach ($transaction->items as $item) {
                     if ($item->product_id) {
                         \App\Models\Product::where('id', $item->product_id)->decrement('stock', $item->quantity);
+                    }
+                }
+
+                $email = $transaction->user ? $transaction->user->email : $transaction->guest_email;
+                if ($email) {
+                    try {
+                        \Illuminate\Support\Facades\Mail::to($email)->send(new \App\Mail\OrderPaymentSuccessMail($transaction));
+                    } catch (\Exception $e) {
+                        \Illuminate\Support\Facades\Log::error('Failed sending payment success email via admin update: ' . $e->getMessage());
                     }
                 }
             }

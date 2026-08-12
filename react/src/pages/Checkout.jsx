@@ -2,15 +2,17 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { useCartStore } from '../store/cart';
+import { useCurrencyStore } from '../store/currency';
 import api from '../lib/axios';
 import { getCountries, getStatesOfCountry, getCitiesOfState } from '@countrystatecity/countries-browser';
 
 const SHIPPING_COST = 25000;
-const formatIDR = (n) => `Rp ${(n ?? 0).toLocaleString('id-ID')}`;
 
 export const Checkout = () => {
   const navigate = useNavigate();
   const { items } = useCartStore();
+  const format = useCurrencyStore((state) => state.format);
+  const currentCurrency = useCurrencyStore((state) => state.currentCurrency);
   const [phase, setPhase] = useState('loading'); // loading | register | login | form | confirm
   const [isGuest, setIsGuest] = useState(true);
 
@@ -413,18 +415,23 @@ export const Checkout = () => {
           {items.map((item, i) => (
             <div key={i} className="flex justify-between text-sm">
               <span className="text-gallery-subtle">{item.name} x{item.quantity}</span>
-              <span>{formatIDR(item.price * item.quantity)}</span>
+              <span>{format(item.price * item.quantity)}</span>
             </div>
           ))}
         </div>
         <div className="border-t border-gallery-stone pt-4 space-y-2 text-sm">
-          <div className="flex justify-between text-gallery-subtle"><span>Subtotal</span><span>{formatIDR(subtotal)}</span></div>
-          <div className="flex justify-between text-gallery-subtle"><span>Shipping</span><span>{formatIDR(SHIPPING_COST)}</span></div>
+          <div className="flex justify-between text-gallery-subtle"><span>Subtotal</span><span>{format(subtotal)}</span></div>
+          <div className="flex justify-between text-gallery-subtle"><span>Shipping</span><span>{format(SHIPPING_COST)}</span></div>
         </div>
         <div className="flex justify-between font-serif text-xl mt-6 pt-4 border-t border-black">
           <span>Total</span>
-          <span>{formatIDR(subtotal + SHIPPING_COST)}</span>
+          <span>{format(subtotal + SHIPPING_COST)}</span>
         </div>
+        {currentCurrency !== 'IDR' && (
+          <p className="text-[11px] text-gallery-subtle mt-3 italic">
+            * Payment will be processed in IDR: Rp {(subtotal + SHIPPING_COST).toLocaleString('id-ID')}
+          </p>
+        )}
       </div>
     </div>
   );
@@ -449,15 +456,20 @@ export const Checkout = () => {
         {items.map((item, i) => (
           <div key={i} className="flex justify-between">
             <span>{item.name} x{item.quantity}</span>
-            <span>{formatIDR(item.price * item.quantity)}</span>
+            <span>{format(item.price * item.quantity)}</span>
           </div>
         ))}
       </div>
 
       <div className="bg-gray-50 p-6 mb-8 space-y-2 text-sm">
-        <div className="flex justify-between"><span>Subtotal</span><span>{formatIDR(subtotal)}</span></div>
-        <div className="flex justify-between"><span>Shipping</span><span>{formatIDR(SHIPPING_COST)}</span></div>
-        <div className="flex justify-between font-bold text-lg border-t pt-2 mt-2"><span>Total</span><span>{formatIDR(subtotal + SHIPPING_COST)}</span></div>
+        <div className="flex justify-between"><span>Subtotal</span><span>{format(subtotal)}</span></div>
+        <div className="flex justify-between"><span>Shipping</span><span>{format(SHIPPING_COST)}</span></div>
+        <div className="flex justify-between font-bold text-lg border-t pt-2 mt-2"><span>Total</span><span>{format(subtotal + SHIPPING_COST)}</span></div>
+        {currentCurrency !== 'IDR' && (
+          <p className="text-[11px] text-gallery-subtle mt-2 italic">
+            * Final payment processed in IDR: Rp {(subtotal + SHIPPING_COST).toLocaleString('id-ID')}
+          </p>
+        )}
       </div>
 
       <div className="flex gap-4 justify-center">

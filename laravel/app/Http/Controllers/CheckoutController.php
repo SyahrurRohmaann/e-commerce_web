@@ -23,7 +23,10 @@ class CheckoutController extends Controller
             'customer_name' => 'required|string',
             'customer_phone' => 'required|string',
             'shipping_address' => 'required|string',
+            'shipping_country' => 'nullable|string',
+            'shipping_province' => 'nullable|string',
             'shipping_city' => 'required|string',
+            'shipping_sub_district' => 'nullable|string',
             'shipping_postal_code' => 'required|string',
         ]);
 
@@ -62,7 +65,10 @@ class CheckoutController extends Controller
                 $user->update([
                     'phone' => $request->customer_phone,
                     'address' => $request->shipping_address,
+                    'country' => $request->shipping_country,
+                    'province' => $request->shipping_province,
                     'city' => $request->shipping_city,
+                    'sub_district' => $request->shipping_sub_district,
                     'postal_code' => $request->shipping_postal_code,
                 ]);
             }
@@ -79,7 +85,10 @@ class CheckoutController extends Controller
                 'customer_phone' => $request->customer_phone,
                 'guest_email' => $user ? null : $request->guest_email,
                 'shipping_address' => $request->shipping_address,
+                'shipping_country' => $request->shipping_country,
+                'shipping_province' => $request->shipping_province,
                 'shipping_city' => $request->shipping_city,
+                'shipping_sub_district' => $request->shipping_sub_district,
                 'shipping_postal_code' => $request->shipping_postal_code,
                 'shipping_cost' => $shippingCost,
                 'shipping_status' => 'pending',

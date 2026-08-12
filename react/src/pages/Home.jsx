@@ -1,11 +1,14 @@
 import { useState, useEffect } from 'react';
 import api from '../lib/axios';
 import { useCartStore } from '../store/cart';
+import { useCurrencyStore } from '../store/currency';
 import { HeroSlider } from '../components/HeroSlider';
 
 export function Home() {
   const [products, setProducts] = useState([]);
   const addItem = useCartStore(state => state.addItem);
+  const currentCurrency = useCurrencyStore(state => state.currentCurrency);
+  const format = useCurrencyStore(state => state.format);
   
   useEffect(() => {
     api.get('/catalog').then(res => setProducts(res.data.data));
@@ -58,7 +61,7 @@ export function Home() {
                   <h3 className="text-lg font-serif mb-1">{p.name}</h3>
                   <p className="text-xs text-gallery-subtle uppercase tracking-widest">{p.category?.name}</p>
                 </div>
-                <p className="text-sm">${Number(p.price).toLocaleString()}</p>
+                <p className="text-sm font-medium">{format(p.price)}</p>
               </div>
             </div>
           ))}

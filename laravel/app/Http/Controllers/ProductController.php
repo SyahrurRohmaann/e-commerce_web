@@ -7,9 +7,11 @@ use Illuminate\Http\Request;
 
 class ProductController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        return response()->json(['data' => Product::with('category')->get()]);
+        $perPage = min($request->integer('per_page', 10), 100) ?: 10;
+
+        return response()->json(Product::with('category')->orderBy('created_at', 'desc')->paginate($perPage));
     }
 
     public function store(Request $request)
