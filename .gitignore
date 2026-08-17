@@ -3,3 +3,7 @@
 node_modules/
 .graphify/
 docs/
+.env
+.venv/
+__pycache__/
+.pytest_cache/
