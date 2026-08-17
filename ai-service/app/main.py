@@ -110,7 +110,8 @@ class CrewRunner:
             verbose=False,
         )
         result = str(crew.kickoff()).strip()
-        if not result.startswith("SECURITY_VERDICT: APPROVED"):
+        verdict = result.splitlines()[0] if result else ""
+        if verdict != "SECURITY_VERDICT: APPROVED":
             raise RuntimeError("CrewAI response did not receive security approval")
         return result
 
