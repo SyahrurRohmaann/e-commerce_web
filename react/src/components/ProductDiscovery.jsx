@@ -2,20 +2,43 @@ import { useMemo, useState } from 'react';
 
 const fallbackImage = 'https://images.unsplash.com/photo-1584916201218-f4242ceb4809?auto=format&fit=crop&q=80&w=800';
 
+function safeImageUrl(value) {
+  if (!value) return fallbackImage;
+
+  try {
+    const url = new URL(value, window.location.origin);
+    return url.protocol === 'https:' ? url.href : fallbackImage;
+  } catch {
+    return fallbackImage;
+  }
+}
+
+function numericPrice(value) {
+  if (typeof value !== 'number' && typeof value !== 'string') return null;
+  if (typeof value === 'string' && value.trim() === '') return null;
+  const price = Number(value);
+  return Number.isFinite(price) && price >= 0 ? price : null;
+}
+
 function handlePrimaryImageError(event) {
   event.currentTarget.onerror = null;
   event.currentTarget.src = fallbackImage;
 }
 
 function ProductCard({ product, addItem, format }) {
-  const unavailable = Number(product.stock) < 1;
-  const [hoverImageAvailable, setHoverImageAvailable] = useState(Boolean(product.hover_image_url));
+  const stock = Number(product.stock);
+  const price = numericPrice(product.price);
+  const unavailable = !Number.isFinite(stock) || stock < 1 || price === null;
+  const hoverImageUrl = safeImageUrl(product.hover_image_url);
+  const [hoverImageAvailable, setHoverImageAvailable] = useState(
+    Boolean(product.hover_image_url) && hoverImageUrl !== fallbackImage,
+  );
 
   return (
     <article data-testid="product-card" className="group flex flex-col">
       <div className="aspect-[4/5] bg-gallery-stone mb-6 overflow-hidden relative">
         <img
-          src={product.image_url || fallbackImage}
+          src={safeImageUrl(product.image_url)}
           alt={product.name}
           loading="lazy"
           className={`w-full h-full object-cover transition-all duration-700 group-hover:scale-[1.025] ${hoverImageAvailable ? 'group-hover:opacity-0 absolute inset-0 z-10' : ''}`}
@@ -23,7 +46,7 @@ function ProductCard({ product, addItem, format }) {
         />
         {hoverImageAvailable && (
           <img
-            src={product.hover_image_url}
+            src={hoverImageUrl}
             alt=""
             aria-hidden="true"
             loading="lazy"
@@ -35,6 +58,7 @@ function ProductCard({ product, addItem, format }) {
           type="button"
           onClick={() => addItem(product)}
           disabled={unavailable}
+          aria-label={unavailable ? `${product.name} unavailable` : `Add ${product.name} to cart`}
           className="absolute bottom-0 left-0 z-20 w-full bg-gallery-ink text-white py-4 text-xs tracking-[0.2em] uppercase translate-y-0 sm:translate-y-full sm:group-hover:translate-y-0 sm:group-focus-within:translate-y-0 transition-transform duration-300 disabled:bg-gallery-subtle disabled:cursor-not-allowed"
         >
           {unavailable ? 'Unavailable' : 'Add to Cart'}
@@ -47,7 +71,9 @@ function ProductCard({ product, addItem, format }) {
           </p>
           <h3 className="text-xl leading-tight font-serif">{product.name}</h3>
         </div>
-        <p className="text-sm font-medium whitespace-nowrap">{format(product.price)}</p>
+        <p className="text-sm font-medium whitespace-nowrap">
+          {price === null ? 'Price unavailable' : format(price)}
+        </p>
       </div>
     </article>
   );
@@ -68,8 +94,15 @@ export function ProductDiscovery({ products, addItem, format }) {
       : products.filter((product) => product.category?.name === category);
     const result = [...filtered];
 
-    if (sort === 'price-asc') result.sort((a, b) => Number(a.price) - Number(b.price));
-    if (sort === 'price-desc') result.sort((a, b) => Number(b.price) - Number(a.price));
+    if (sort === 'price-asc' || sort === 'price-desc') {
+      result.sort((a, b) => {
+        const aPrice = numericPrice(a.price);
+        const bPrice = numericPrice(b.price);
+        if (aPrice === null) return bPrice === null ? 0 : 1;
+        if (bPrice === null) return -1;
+        return sort === 'price-asc' ? aPrice - bPrice : bPrice - aPrice;
+      });
+    }
     if (sort === 'name') result.sort((a, b) => a.name.localeCompare(b.name));
 
     return result;

@@ -26,6 +26,14 @@ const products = [
     image_url: 'https://example.com/slate.jpg',
     category: { id: 10, name: 'Outerwear' },
   },
+  {
+    id: 4,
+    name: 'Unsafe Image Piece',
+    price: 'invalid',
+    stock: 3,
+    image_url: 'javascript:alert(1)',
+    category: { id: 12, name: 'Accessories' },
+  },
 ];
 
 test.describe('Product discovery', () => {
@@ -48,7 +56,7 @@ test.describe('Product discovery', () => {
 
   test('filters products by category and reports the result count', async ({ page }) => {
     await expect(page.getByRole('heading', { name: 'Discover the collection' })).toBeVisible();
-    await expect(page.getByText('3 pieces shown')).toBeVisible();
+    await expect(page.getByText('4 pieces shown')).toBeVisible();
 
     await page.getByRole('button', { name: 'Outerwear' }).click();
 
@@ -62,13 +70,48 @@ test.describe('Product discovery', () => {
     await page.getByLabel('Sort collection').selectOption('price-asc');
 
     const productNames = page.locator('[data-testid="product-card"] h3');
-    await expect(productNames).toHaveText(['Ivory Blouse', 'Slate Jacket', 'Obsidian Coat']);
-    await expect(page.getByRole('button', { name: 'Unavailable' })).toBeDisabled();
+    await expect(productNames).toHaveText(['Ivory Blouse', 'Slate Jacket', 'Obsidian Coat', 'Unsafe Image Piece']);
+    await expect(page.getByRole('button', { name: 'Ivory Blouse unavailable' })).toBeDisabled();
   });
 
   test('keeps the primary image visible when a hover image fails', async ({ page }) => {
     const primaryImage = page.getByRole('img', { name: 'Obsidian Coat' });
 
     await expect(primaryImage).not.toHaveClass(/group-hover:opacity-0/);
+  });
+
+  test('fails closed for unsafe product data and exposes specific cart labels', async ({ page }) => {
+    await expect(page.getByRole('button', { name: 'Add Obsidian Coat to cart' })).toBeEnabled();
+    await expect(page.getByRole('button', { name: 'Unsafe Image Piece unavailable' })).toBeDisabled();
+    await expect(page.getByRole('img', { name: 'Unsafe Image Piece' })).toHaveAttribute('src', /images\.unsplash\.com/);
+    await expect(page.getByText('Price unavailable')).toBeVisible();
+  });
+
+  test('keeps malformed prices last for descending sort', async ({ page }) => {
+    await page.getByLabel('Sort collection').selectOption('price-desc');
+
+    await expect(page.locator('[data-testid="product-card"] h3')).toHaveText([
+      'Obsidian Coat',
+      'Slate Jacket',
+      'Ivory Blouse',
+      'Unsafe Image Piece',
+    ]);
+  });
+
+  test('treats blank prices as unavailable instead of free', async ({ page }) => {
+    const blankPriceProducts = products.map((product) => (
+      product.id === 4 ? { ...product, price: '   ' } : product
+    ));
+    await page.route('**/api/catalog', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ data: blankPriceProducts }),
+      });
+    });
+    await page.reload();
+
+    await expect(page.getByRole('button', { name: 'Unsafe Image Piece unavailable' })).toBeDisabled();
+    await expect(page.getByText('Price unavailable')).toBeVisible();
   });
 });
