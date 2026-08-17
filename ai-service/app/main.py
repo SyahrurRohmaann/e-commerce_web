@@ -6,7 +6,7 @@ from crewai import Agent, Crew, LLM, Process, Task
 from fastapi import Depends, FastAPI, HTTPException
 from pydantic import BaseModel, Field, field_validator
 
-MODEL = os.getenv("CREW_MODEL", "crew")
+MODEL = "crew"
 DEFAULT_BASE_URL = "http://9router:20128/v1"
 
 

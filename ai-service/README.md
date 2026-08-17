@@ -13,7 +13,7 @@ set -a && . ./.env && set +a
 uv run uvicorn app.main:app --host 0.0.0.0 --port 8001
 ```
 
-The service tries `CREW_BASE_URL` first and then `CREW_FALLBACK_BASE_URL`. The API key stays server-side.
+Every CrewAI agent uses the fixed 9router combo model `crew`. The service tries `CREW_BASE_URL` (`http://9router:20128/v1`) first and then `CREW_FALLBACK_BASE_URL`. The API key stays server-side.
 
 ## Endpoints
 

@@ -23,6 +23,23 @@ def test_health_endpoint_reports_model():
     assert response.json() == {"status": "ok", "model": "crew"}
 
 
+def test_crew_runner_uses_9router_combo_model(monkeypatch):
+    runner = CrewRunner()
+    captured = {}
+
+    class FakeLLM:
+        def __init__(self, **kwargs):
+            captured.update(kwargs)
+
+    monkeypatch.setattr("app.main.LLM", FakeLLM)
+
+    runner._build_llm("http://9router:20128/v1")
+
+    assert captured["model"] == "crew"
+    assert captured["provider"] == "openai"
+    assert captured["base_url"] == "http://9router:20128/v1"
+
+
 def test_crew_endpoint_runs_prompt():
     app.dependency_overrides[get_crew_runner] = lambda: FakeCrewRunner()
     client = TestClient(app)
