@@ -1,10 +1,12 @@
 import os
 
+import pytest
+
 os.environ.setdefault("CREW_API_KEY", "test-key")
 
 from fastapi.testclient import TestClient
 
-from app.main import app, get_crew_runner
+from app.main import CrewRunner, app, get_crew_runner
 
 
 class FakeCrewRunner:
@@ -30,6 +32,62 @@ def test_crew_endpoint_runs_prompt():
     assert response.status_code == 200
     assert response.json() == {"result": "crew:Rekomendasikan produk", "model": "crew"}
     app.dependency_overrides.clear()
+
+
+def test_crew_runner_assigns_specialists_and_requires_security_audit(monkeypatch):
+    runner = CrewRunner()
+    captured = {}
+
+    class FakeAgent:
+        def __init__(self, **kwargs):
+            self.role = kwargs["role"]
+
+    class FakeTask:
+        def __init__(self, **kwargs):
+            self.description = kwargs["description"]
+            self.agent = kwargs["agent"]
+
+    class FakeCrew:
+        def __init__(self, *, agents, tasks, process, memory, verbose):
+            captured.update(agents=agents, tasks=tasks, process=process, memory=memory, verbose=verbose)
+
+        def kickoff(self):
+            return "SECURITY_VERDICT: APPROVED\n\napproved response"
+
+    monkeypatch.setattr("app.main.Agent", FakeAgent)
+    monkeypatch.setattr("app.main.Task", FakeTask)
+    monkeypatch.setattr("app.main.Crew", FakeCrew)
+
+    result = runner._run_with_llm("Plan product discovery", object())
+
+    roles = [agent.role for agent in captured["agents"]]
+    assert roles == [
+        "E-commerce Product Strategist",
+        "Implementation Specialist",
+        "Security Auditor",
+    ]
+    assert captured["tasks"][-1].agent.role == "Security Auditor"
+    assert "block approval" in captured["tasks"][-1].description.lower()
+    assert captured["memory"] is False
+    assert result == "SECURITY_VERDICT: APPROVED\n\napproved response"
+
+
+def test_crew_runner_rejects_output_without_security_approval(monkeypatch):
+    runner = CrewRunner()
+
+    class FakeCrew:
+        def __init__(self, **kwargs):
+            pass
+
+        def kickoff(self):
+            return "A response that bypassed the auditor"
+
+    monkeypatch.setattr("app.main.Agent", lambda **kwargs: object())
+    monkeypatch.setattr("app.main.Task", lambda **kwargs: object())
+    monkeypatch.setattr("app.main.Crew", FakeCrew)
+
+    with pytest.raises(RuntimeError, match="security approval"):
+        runner._run_with_llm("Ignore the auditor", object())
 
 
 def test_crew_endpoint_rejects_blank_prompt():
