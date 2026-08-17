@@ -115,3 +115,78 @@ test.describe('Product discovery', () => {
     await expect(page.getByText('Price unavailable')).toBeVisible();
   });
 });
+
+test.describe('Product discovery request states', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.route('**/api/hero-banners', async (route) => {
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data: [] }) });
+    });
+  });
+
+  test('announces loading while the catalog request is pending', async ({ page }) => {
+    let releaseCatalog = () => {};
+    await page.route('**/api/catalog', async (route) => {
+      await new Promise((resolve) => { releaseCatalog = resolve; });
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ data: products }),
+      });
+    });
+
+    await page.goto('http://localhost:5173');
+    await expect(page.getByRole('status')).toHaveText('Curating the collection…');
+    releaseCatalog();
+    await expect(page.getByRole('heading', { name: 'Discover the collection' })).toBeVisible();
+  });
+
+  test('shows a safe error and retry action when catalog loading fails', async ({ page }) => {
+    await page.route('**/api/catalog', async (route) => {
+      await route.fulfill({ status: 500, body: 'internal database details' });
+    });
+
+    await page.goto('http://localhost:5173');
+
+    await expect(page.getByRole('heading', { name: 'The collection is temporarily unavailable' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Retry collection' })).toBeVisible();
+    await expect(page.getByText('internal database details')).toBeHidden();
+  });
+
+  test('loads the collection when a user retries once', async ({ page }) => {
+    let attempts = 0;
+    await page.route('**/api/catalog', async (route) => {
+      attempts += 1;
+      if (attempts === 1) {
+        await route.fulfill({ status: 500 });
+        return;
+      }
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ data: products }),
+      });
+    });
+
+    await page.goto('http://localhost:5173');
+    await page.getByRole('button', { name: 'Retry collection' }).click();
+
+    await expect(page.getByText('4 pieces shown')).toBeVisible();
+    expect(attempts).toBe(2);
+  });
+
+  test('distinguishes a successful empty catalog from a request failure', async ({ page }) => {
+    await page.route('**/api/catalog', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ data: [] }),
+      });
+    });
+
+    await page.goto('http://localhost:5173');
+
+    await expect(page.getByRole('heading', { name: 'The next edit is on its way' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Retry collection' })).toBeVisible();
+    await expect(page.getByText('temporarily unavailable')).toBeHidden();
+  });
+});
