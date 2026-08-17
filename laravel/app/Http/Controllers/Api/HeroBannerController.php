@@ -32,23 +32,29 @@ class HeroBannerController extends Controller
         return response()->json(['data' => $banner]);
     }
 
-    // Admin: create banner
-    public function store(Request $request)
+    private function rules(): array
     {
-        $validated = $request->validate([
-            'title' => 'nullable|string|max:255',
-            'caption' => 'nullable|string|max:500',
-            'subtitle' => 'nullable|string|max:255',
+        return [
+            'title' => 'nullable|string|max:55',
+            'caption' => 'nullable|string|max:80',
+            'subtitle' => 'nullable|string|max:160',
             'image_url' => 'required|url',
-            'title_position' => 'nullable|in:tl,tc,tr,ml,mc,mr,bl,bc,br',
-            'caption_position' => 'nullable|in:tl,tc,tr,ml,mc,mr,bl,bc,br',
-            'button_position' => 'nullable|in:tl,tc,tr,ml,mc,mr,bl,bc,br',
-            'button_text' => 'nullable|string|max:255',
+            'layout_direction' => 'nullable|in:text-left,text-right',
+            'panel_theme' => 'nullable|in:ivory,stone,ink',
+            'image_position' => ['nullable', 'regex:/^(?:100|[1-9]?\d)% (?:100|[1-9]?\d)%$/'],
+            'text_alignment' => 'nullable|in:left,center',
+            'button_text' => 'nullable|string|max:40',
             'button_url' => 'nullable|string|max:255',
             'sort_order' => 'nullable|integer',
             'is_active' => 'nullable|boolean',
-            'duration_ms' => 'nullable|integer|min:1000',
-        ]);
+            'duration_ms' => 'nullable|integer|min:1000|max:30000',
+        ];
+    }
+
+    // Admin: create banner
+    public function store(Request $request)
+    {
+        $validated = $request->validate($this->rules());
 
         // Auto sort_order if not provided
         if (!isset($validated['sort_order'])) {
@@ -70,20 +76,7 @@ class HeroBannerController extends Controller
     {
         $banner = HeroBanner::findOrFail($id);
 
-        $validated = $request->validate([
-            'title' => 'nullable|string|max:255',
-            'caption' => 'nullable|string|max:500',
-            'subtitle' => 'nullable|string|max:255',
-            'image_url' => 'required|url',
-            'title_position' => 'nullable|in:tl,tc,tr,ml,mc,mr,bl,bc,br',
-            'caption_position' => 'nullable|in:tl,tc,tr,ml,mc,mr,bl,bc,br',
-            'button_position' => 'nullable|in:tl,tc,tr,ml,mc,mr,bl,bc,br',
-            'button_text' => 'nullable|string|max:255',
-            'button_url' => 'nullable|string|max:255',
-            'sort_order' => 'nullable|integer',
-            'is_active' => 'nullable|boolean',
-            'duration_ms' => 'nullable|integer|min:1000',
-        ]);
+        $validated = $request->validate($this->rules());
 
         $banner->update($validated);
         return response()->json(['data' => $banner]);

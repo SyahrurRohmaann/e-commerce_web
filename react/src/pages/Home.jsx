@@ -14,8 +14,6 @@ export function Home() {
     api.get('/catalog').then(res => setProducts(res.data.data));
   }, []);
 
-  if (products.length === 0) return <div className="h-screen flex items-center justify-center text-gallery-subtle uppercase tracking-widest text-sm">Curating collection...</div>;
-
   const galleryProducts = products;
 
   return (
@@ -30,6 +28,9 @@ export function Home() {
           <span className="text-sm tracking-widest uppercase text-gallery-subtle">{galleryProducts.length} Pieces</span>
         </div>
 
+        {galleryProducts.length === 0 ? (
+          <div className="py-24 text-center text-gallery-subtle uppercase tracking-widest text-sm">Curating collection...</div>
+        ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-12 gap-y-24">
           {galleryProducts.map(p => (
             <div key={p.id} className="group flex flex-col">
@@ -66,6 +67,7 @@ export function Home() {
             </div>
           ))}
         </div>
+        )}
       </section>
     </div>
   );
