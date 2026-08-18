@@ -1,27 +1,27 @@
 <?php
 
-use Illuminate\Http\Request;
+use App\Http\Controllers\Api\HeroBannerController;
+use App\Http\Controllers\AuthController;
+use App\Http\Controllers\CatalogController;
+use App\Http\Controllers\CategoryController;
+use App\Http\Controllers\CheckoutController;
+use App\Http\Controllers\ProductController;
+use App\Http\Controllers\ProductDetailController;
+use App\Http\Controllers\TransactionController;
+use App\Http\Controllers\WebhookController;
 use Illuminate\Support\Facades\Route;
 
-use App\Http\Controllers\AuthController;
-use App\Http\Controllers\CategoryController;
-use App\Http\Controllers\ProductController;
-use App\Http\Controllers\TransactionController;
-use App\Http\Controllers\CatalogController;
-use App\Http\Controllers\ProductDetailController;
-use App\Http\Controllers\Api\HeroBannerController;
+Route::post('/register', [AuthController::class, 'register'])->middleware('throttle:auth.register');
+Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:auth.login');
 
-Route::post('/register', [AuthController::class, 'register']);
-Route::post('/login', [AuthController::class, 'login']);
-
-Route::get('/catalog', [CatalogController::class, 'index']);
-Route::get('/catalog/{id}', [ProductDetailController::class, 'show']);
+Route::get('/catalog', [CatalogController::class, 'index'])->middleware('throttle:catalog');
+Route::get('/catalog/{id}', [ProductDetailController::class, 'show'])->middleware('throttle:catalog');
 Route::get('/hero-banners', [HeroBannerController::class, 'index']);
 
-Route::post('/webhook/xendit', [\App\Http\Controllers\WebhookController::class, 'handle']);
-Route::post('/checkout', [\App\Http\Controllers\CheckoutController::class, 'store']);
-Route::get('/transactions/guest/{id}', [TransactionController::class, 'showGuest']);
-Route::get('/transactions/track', [TransactionController::class, 'trackGuest']);
+Route::post('/webhook/xendit', [WebhookController::class, 'handle'])->middleware('throttle:webhook.xendit');
+Route::post('/checkout', [CheckoutController::class, 'store'])->middleware('throttle:checkout');
+Route::get('/transactions/guest/{id}', [TransactionController::class, 'showGuest'])->middleware('throttle:guest-tracking');
+Route::get('/transactions/track', [TransactionController::class, 'trackGuest'])->middleware('throttle:guest-tracking');
 
 Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/profile', [AuthController::class, 'profile']);

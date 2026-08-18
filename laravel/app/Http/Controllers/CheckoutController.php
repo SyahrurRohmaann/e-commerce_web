@@ -117,22 +117,18 @@ class CheckoutController extends Controller
                 'failure_redirect_url' => env('FRONTEND_URL', 'http://localhost:5173').'/checkout/failure',
             ]);
 
-            try {
-                $result = $apiInstance->createInvoice($createInvoiceRequest);
+            $result = $apiInstance->createInvoice($createInvoiceRequest);
 
-                $transaction->update([
-                    'xendit_invoice_id' => $result['id'],
-                    'invoice_url' => $result['invoice_url'],
-                ]);
+            $transaction->update([
+                'xendit_invoice_id' => $result['id'],
+                'invoice_url' => $result['invoice_url'],
+            ]);
 
-                return response()->json([
-                    'transaction_id' => $transaction->id,
-                    'invoice_url' => $result['invoice_url'],
-                    'tracking_token' => $trackingToken,
-                ]);
-            } catch (\Exception $e) {
-                return response()->json(['message' => 'Failed to create invoice.'], 500);
-            }
+            return response()->json([
+                'transaction_id' => $transaction->id,
+                'invoice_url' => $result['invoice_url'],
+                'tracking_token' => $trackingToken,
+            ]);
         });
     }
 }
