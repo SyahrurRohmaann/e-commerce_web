@@ -1,11 +1,1 @@
-.claude/
-.opencode/
-node_modules/
-.graphify/
-docs/
-.env
-.venv/
-__pycache__/
-.pytest_cache/
-ai-service/
-.hermes/
+task4-canary-trace.txt

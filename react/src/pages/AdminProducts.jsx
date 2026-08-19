@@ -18,6 +18,8 @@ export function AdminProducts() {
   const [form, setForm] = useState({
     category_id: '', name: '', description: '', price: '', stock: '', image_url: '', hover_image_url: ''
   });
+  const [imageFile, setImageFile] = useState(null);
+  const [hoverImageFile, setHoverImageFile] = useState(null);
 
   const currentCurrency = useCurrencyStore((state) => state.currentCurrency);
   const format = useCurrencyStore((state) => state.format);
@@ -48,18 +50,31 @@ export function AdminProducts() {
   const resetForm = () => {
     setForm(emptyForm);
     setEditing(null);
+    setImageFile(null);
+    setHoverImageFile(null);
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSaving(true);
-    const payload = { ...form, price: parseFloat(form.price), stock: parseInt(form.stock, 10) };
+    const payload = new FormData();
+    payload.append('category_id', form.category_id);
+    payload.append('name', form.name);
+    payload.append('description', form.description || '');
+    payload.append('price', form.price);
+    payload.append('stock', form.stock);
+    payload.append('image_url', form.image_url || '');
+    payload.append('hover_image_url', form.hover_image_url || '');
+    if (imageFile) payload.append('image', imageFile);
+    if (hoverImageFile) payload.append('hover_image', hoverImageFile);
+
+    const config = { headers: { 'Content-Type': 'multipart/form-data' } };
     try {
       if (editing) {
-        await api.put(`/admin/products/${editing}`, payload);
+        await api.put(`/admin/products/${editing}`, payload, config);
         toast.success('Product updated successfully');
       } else {
-        await api.post('/admin/products', payload);
+        await api.post('/admin/products', payload, config);
         toast.success('Product created successfully');
       }
       resetForm();
@@ -76,6 +91,8 @@ export function AdminProducts() {
       category_id: p.category_id, name: p.name, description: p.description || '',
       price: p.price, stock: p.stock, image_url: p.image_url || '', hover_image_url: p.hover_image_url || ''
     });
+    setImageFile(null);
+    setHoverImageFile(null);
     setEditing(p.id);
   };
 
@@ -167,22 +184,26 @@ export function AdminProducts() {
             />
           </div>
           <div>
-            <label className="block text-xs uppercase tracking-widest text-gallery-subtle mb-2">Image URL</label>
+            <label className="block text-xs uppercase tracking-widest text-gallery-subtle mb-2">Image</label>
             <input
-              type="url"
-              value={form.image_url}
-              onChange={e => setForm({ ...form, image_url: e.target.value })}
-              className="w-full border-b border-gallery-stone bg-transparent py-3 focus:outline-none focus:border-gallery-ink transition-colors"
+              type="file"
+              accept="image/jpeg,image/png,image/gif,image/webp"
+              onChange={e => setImageFile(e.target.files?.[0] || null)}
+              className="w-full text-xs text-gallery-subtle file:mr-4 file:border-0 file:bg-gallery-stone/50 file:px-4 file:py-2 file:text-xs file:uppercase file:tracking-widest file:text-gallery-ink hover:file:bg-gallery-stone/80 transition-colors"
             />
+            <p className="mt-1 text-[10px] uppercase tracking-widest text-gallery-subtle">Converted to WebP on upload · max 4MB</p>
+            {imageFile && <p className="mt-1 text-[10px] text-green-700">Selected: {imageFile.name}</p>}
           </div>
           <div>
-            <label className="block text-xs uppercase tracking-widest text-gallery-subtle mb-2">Hover Image URL</label>
+            <label className="block text-xs uppercase tracking-widest text-gallery-subtle mb-2">Hover Image</label>
             <input
-              type="url"
-              value={form.hover_image_url}
-              onChange={e => setForm({ ...form, hover_image_url: e.target.value })}
-              className="w-full border-b border-gallery-stone bg-transparent py-3 focus:outline-none focus:border-gallery-ink transition-colors"
+              type="file"
+              accept="image/jpeg,image/png,image/gif,image/webp"
+              onChange={e => setHoverImageFile(e.target.files?.[0] || null)}
+              className="w-full text-xs text-gallery-subtle file:mr-4 file:border-0 file:bg-gallery-stone/50 file:px-4 file:py-2 file:text-xs file:uppercase file:tracking-widest file:text-gallery-ink hover:file:bg-gallery-stone/80 transition-colors"
             />
+            <p className="mt-1 text-[10px] uppercase tracking-widest text-gallery-subtle">Converted to WebP on upload · max 4MB</p>
+            {hoverImageFile && <p className="mt-1 text-[10px] text-green-700">Selected: {hoverImageFile.name}</p>}
           </div>
         </div>
         <div className="mb-6">

@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\AnnouncementBarController;
 use App\Http\Controllers\Api\HeroBannerController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CatalogController;
@@ -16,7 +17,9 @@ Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:au
 
 Route::get('/catalog', [CatalogController::class, 'index'])->middleware('throttle:catalog');
 Route::get('/catalog/{id}', [ProductDetailController::class, 'show'])->middleware('throttle:catalog');
+Route::get('/categories', [CategoryController::class, 'index']);
 Route::get('/hero-banners', [HeroBannerController::class, 'index']);
+Route::get('/announcements', [AnnouncementBarController::class, 'index']);
 
 Route::post('/webhook/xendit', [WebhookController::class, 'handle'])->middleware('throttle:webhook.xendit');
 Route::post('/checkout', [CheckoutController::class, 'store'])->middleware('throttle:checkout');
@@ -42,5 +45,10 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::get('hero-banners/{id}', [HeroBannerController::class, 'show']);
         Route::put('hero-banners/{id}', [HeroBannerController::class, 'update']);
         Route::delete('hero-banners/{id}', [HeroBannerController::class, 'destroy']);
+
+        Route::get('announcements', [AnnouncementBarController::class, 'adminIndex']);
+        Route::post('announcements', [AnnouncementBarController::class, 'store']);
+        Route::put('announcements/{id}', [AnnouncementBarController::class, 'update']);
+        Route::delete('announcements/{id}', [AnnouncementBarController::class, 'destroy']);
     });
 });

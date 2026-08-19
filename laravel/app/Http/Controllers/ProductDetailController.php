@@ -9,7 +9,7 @@ class ProductDetailController extends Controller
 {
     public function show($id)
     {
-        $product = Product::with('category')->findOrFail($id);
+        $product = Product::with('category.parent')->findOrFail($id);
         return response()->json(['data' => $product]);
     }
 }

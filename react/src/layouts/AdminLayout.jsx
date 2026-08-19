@@ -94,6 +94,7 @@ export function AdminLayout() {
           <Link to="/admin" className={navItemClass('/admin')}>Dashboard</Link>
           <Link to="/admin/categories" className={navItemClass('/admin/categories')}>Categories</Link>
           <Link to="/admin/products" className={navItemClass('/admin/products')}>Products</Link>
+          <Link to="/admin/announcements" className={navItemClass('/admin/announcements')}>Announcements</Link>
           <Link to="/admin/transactions" className={navItemClass('/admin/transactions')}>Transactions</Link>
           <Link to="/admin/hero-banners" className={navItemClass('/admin/hero-banners')}>Hero Banners</Link>
           <Link to="/" className="px-4 py-3 text-sm uppercase tracking-widest hover:bg-gallery-stone/50 transition-colors mt-8 border-t border-gallery-stone pt-6">Storefront</Link>

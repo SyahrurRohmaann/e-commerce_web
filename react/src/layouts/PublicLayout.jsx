@@ -3,6 +3,8 @@ import { Outlet, Link, useNavigate } from 'react-router-dom';
 import { useCartStore } from '../store/cart';
 import { useCurrencyStore } from '../store/currency';
 import { CURRENCIES } from '../lib/currency';
+import { AnnouncementBar } from '../components/AnnouncementBar';
+import { SearchOverlay } from '../components/SearchOverlay';
 
 export function PublicLayout() {
   const items = useCartStore((state) => state.items);
@@ -62,12 +64,14 @@ export function PublicLayout() {
 
   return (
     <div className="min-h-screen flex flex-col font-sans">
-      <header className="fixed w-full top-0 z-50 bg-gallery-white/90 backdrop-blur-md transition-all duration-300 border-b border-gallery-stone/30">
+      <AnnouncementBar />
+      <header className="sticky top-0 w-full z-40 bg-gallery-white/90 backdrop-blur-md transition-all duration-300 border-b border-gallery-stone/30">
         <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
           <Link to="/" className="text-2xl font-serif tracking-wide text-gallery-ink hover:opacity-70 transition-opacity">
             ALAGANCE
           </Link>
           <nav className="flex items-center gap-8 text-sm tracking-widest uppercase">
+            <SearchOverlay />
             <Link to="/" className="text-gallery-ink hover:text-gallery-subtle transition-colors">Catalog</Link>
             <Link to="/cart" className="text-gallery-ink hover:text-gallery-subtle transition-colors flex items-center gap-2">
               Cart {cartCount > 0 && <span className="bg-gallery-ink text-gallery-white text-xs px-2 py-0.5 rounded-full">{cartCount}</span>}
@@ -116,7 +120,7 @@ export function PublicLayout() {
           </nav>
         </div>
       </header>
-      <main className="flex-grow mt-20">
+      <main className="flex-grow">
         <Outlet />
       </main>
       <footer className="border-t border-gallery-stone py-12 text-center text-sm text-gallery-subtle mt-24">

@@ -66,9 +66,6 @@ function ProductCard({ product, addItem, format }) {
       </div>
       <div className="flex justify-between items-start gap-6">
         <div>
-          <p className="mb-2 text-[10px] text-gallery-subtle uppercase tracking-[0.22em]">
-            {product.category?.name || 'Uncategorized'}
-          </p>
           <h3 className="text-xl leading-tight font-serif">{product.name}</h3>
         </div>
         <p className="text-sm font-medium whitespace-nowrap">
@@ -81,17 +78,47 @@ function ProductCard({ product, addItem, format }) {
 
 export function ProductDiscovery({ products, addItem, format }) {
   const [category, setCategory] = useState('all');
+  const [subcategory, setSubcategory] = useState('all');
   const [sort, setSort] = useState('featured');
 
-  const categories = useMemo(() => (
-    [...new Set(products.map((product) => product.category?.name).filter(Boolean))]
-      .sort((a, b) => a.localeCompare(b))
-  ), [products]);
+  // Build a two-level taxonomy from products: top-level categories and their subcategories.
+  const taxonomy = useMemo(() => {
+    const byParent = {};
+    products.forEach((product) => {
+      const cat = product.category;
+      if (!cat) return;
+      const parentName = cat.parent?.name || cat.name;
+      const isChild = Boolean(cat.parent_id);
+      if (!byParent[parentName]) byParent[parentName] = { children: new Set(), hasSubcategories: false };
+      if (isChild) {
+        byParent[parentName].children.add(cat.name);
+        byParent[parentName].hasSubcategories = true;
+      }
+    });
+    return Object.entries(byParent)
+      .map(([name, info]) => ({ name, children: [...info.children].sort((a, b) => a.localeCompare(b)), hasSubcategories: info.hasSubcategories }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [products]);
+
+  const activeTaxon = taxonomy.find((item) => item.name === category);
+  const subcategories = activeTaxon?.hasSubcategories ? activeTaxon.children : [];
 
   const visibleProducts = useMemo(() => {
-    const filtered = category === 'all'
-      ? products
-      : products.filter((product) => product.category?.name === category);
+    let filtered = products;
+
+    if (category !== 'all') {
+      filtered = filtered.filter((product) => {
+        const cat = product.category;
+        if (!cat) return false;
+        const parentName = cat.parent?.name || cat.name;
+        return parentName === category;
+      });
+    }
+
+    if (subcategory !== 'all') {
+      filtered = filtered.filter((product) => product.category?.name === subcategory);
+    }
+
     const result = [...filtered];
 
     if (sort === 'price-asc' || sort === 'price-desc') {
@@ -106,7 +133,7 @@ export function ProductDiscovery({ products, addItem, format }) {
     if (sort === 'name') result.sort((a, b) => a.name.localeCompare(b.name));
 
     return result;
-  }, [category, products, sort]);
+  }, [category, subcategory, products, sort]);
 
   return (
     <section id="collection" aria-labelledby="collection-heading" className="max-w-7xl mx-auto px-6 py-24 sm:py-32">
@@ -134,22 +161,58 @@ export function ProductDiscovery({ products, addItem, format }) {
       </div>
 
       <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between mb-14">
-        <div className="flex gap-2 overflow-x-auto pb-2" aria-label="Filter collection by category">
-          {['all', ...categories].map((item) => {
-            const selected = category === item;
-            const label = item === 'all' ? 'All pieces' : item;
-            return (
+        <div>
+          <div className="flex gap-2 overflow-x-auto pb-2" aria-label="Filter collection by category">
+            <button
+              type="button"
+              onClick={() => { setCategory('all'); setSubcategory('all'); }}
+              aria-pressed={category === 'all'}
+              className={`shrink-0 border px-5 py-2.5 text-[10px] font-semibold uppercase tracking-[0.18em] transition-colors ${category === 'all' ? 'border-gallery-ink bg-gallery-ink text-gallery-white' : 'border-gallery-stone hover:border-gallery-ink'}`}
+            >
+              All pieces
+            </button>
+            {taxonomy.map((item) => {
+              const selected = category === item.name;
+              return (
+                <button
+                  type="button"
+                  key={item.name}
+                  onClick={() => {
+                    setCategory(item.name);
+                    setSubcategory('all');
+                  }}
+                  aria-pressed={selected}
+                  className={`shrink-0 border px-5 py-2.5 text-[10px] font-semibold uppercase tracking-[0.18em] transition-colors ${selected ? 'border-gallery-ink bg-gallery-ink text-gallery-white' : 'border-gallery-stone hover:border-gallery-ink'}`}
+                >
+                  {item.name}
+                </button>
+              );
+            })}
+          </div>
+
+          {subcategories.length > 0 && (
+            <div className="flex gap-2 overflow-x-auto mt-3 pb-1" aria-label="Filter by subcategory">
               <button
                 type="button"
-                key={item}
-                onClick={() => setCategory(item)}
-                aria-pressed={selected}
-                className={`shrink-0 border px-5 py-2.5 text-[10px] font-semibold uppercase tracking-[0.18em] transition-colors ${selected ? 'border-gallery-ink bg-gallery-ink text-gallery-white' : 'border-gallery-stone hover:border-gallery-ink'}`}
+                onClick={() => setSubcategory('all')}
+                aria-pressed={subcategory === 'all'}
+                className={`shrink-0 border-t-0 border-x-0 border-b px-3 py-1.5 text-[10px] font-medium uppercase tracking-[0.18em] transition-colors ${subcategory === 'all' ? 'border-gallery-ink text-gallery-ink' : 'border-transparent text-gallery-subtle hover:text-gallery-ink'}`}
               >
-                {label}
+                All {category}
               </button>
-            );
-          })}
+              {subcategories.map((child) => (
+                <button
+                  type="button"
+                  key={child}
+                  onClick={() => setSubcategory(child)}
+                  aria-pressed={subcategory === child}
+                  className={`shrink-0 border-t-0 border-x-0 border-b px-3 py-1.5 text-[10px] font-medium uppercase tracking-[0.18em] transition-colors ${subcategory === child ? 'border-gallery-ink text-gallery-ink' : 'border-transparent text-gallery-subtle hover:text-gallery-ink'}`}
+                >
+                  {child}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
         <p aria-live="polite" className="text-[10px] uppercase tracking-[0.2em] text-gallery-subtle">
           {visibleProducts.length} {visibleProducts.length === 1 ? 'piece' : 'pieces'} shown

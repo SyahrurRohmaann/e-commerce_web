@@ -8,6 +8,17 @@
   
   --font-serif: "Playfair Display", "Cormorant", serif;
   --font-sans: "Inter", "Helvetica Neue", sans-serif;
+
+  --animate-marquee: marquee 18s linear infinite;
+
+  @keyframes marquee {
+    from {
+      transform: translateX(0);
+    }
+    to {
+      transform: translateX(-50%);
+    }
+  }
 }
 
 @layer base {

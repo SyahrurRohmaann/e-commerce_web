@@ -12,6 +12,7 @@ import { Register } from './pages/Register';
 import { Dashboard } from './pages/Dashboard';
 import { AdminCategories } from './pages/AdminCategories';
 import { AdminProducts } from './pages/AdminProducts';
+import { AdminAnnouncements } from './pages/AdminAnnouncements';
 import { AdminTransactions } from './pages/AdminTransactions';
 import { AdminHeroBanners } from './pages/AdminHeroBanners';
 import { OrderStatus } from './pages/OrderStatus';
@@ -66,6 +67,7 @@ function App() {
           <Route path="/admin" element={<Dashboard />} />
           <Route path="/admin/categories" element={<AdminCategories />} />
           <Route path="/admin/products" element={<AdminProducts />} />
+          <Route path="/admin/announcements" element={<AdminAnnouncements />} />
           <Route path="/admin/transactions" element={<AdminTransactions />} />
           <Route path="/admin/hero-banners" element={<AdminHeroBanners />} />
         </Route>
