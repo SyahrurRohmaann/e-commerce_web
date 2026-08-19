@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import api from '../lib/axios';
 import { useCurrencyStore } from '../store/currency';
+import LoadingState from '../components/ui/LoadingState';
+import ErrorState from '../components/ui/ErrorState';
 
 export function AdminProducts() {
   const [products, setProducts] = useState([]);
@@ -12,6 +14,7 @@ export function AdminProducts() {
   const [page, setPage] = useState(1);
   const [lastPage, setLastPage] = useState(1);
   const [total, setTotal] = useState(0);
+  const [error, setError] = useState('');
   const [form, setForm] = useState({
     category_id: '', name: '', description: '', price: '', stock: '', image_url: '', hover_image_url: ''
   });
@@ -22,6 +25,7 @@ export function AdminProducts() {
   useEffect(() => { fetchData(page); }, [page]);
 
   const fetchData = async (page) => {
+    setError('');
     try {
       const [prodRes, catRes] = await Promise.all([
         api.get(`/admin/products?page=${page}`),
@@ -33,7 +37,7 @@ export function AdminProducts() {
       setTotal(prodRes.data.total);
       setCategories(catRes.data.data);
     } catch {
-      toast.error('Failed to load data');
+      setError('Unable to load products.');
     } finally {
       setLoading(false);
     }
@@ -107,7 +111,8 @@ export function AdminProducts() {
     ));
   };
 
-  if (loading) return <div className="text-sm tracking-widest uppercase text-gallery-subtle">Loading...</div>;
+  if (loading) return <LoadingState label="Loading products" />;
+  if (error) return <ErrorState message={error} onRetry={() => fetchData(page)} />;
 
   return (
     <div className="animate-in fade-in duration-500 max-w-6xl">
