@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import api from '../lib/axios';
+import LoadingState from '../components/ui/LoadingState';
+import ErrorState from '../components/ui/ErrorState';
 
 export function Profile() {
   const [user, setUser] = useState(null);
@@ -14,6 +16,7 @@ export function Profile() {
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -22,6 +25,7 @@ export function Profile() {
   }, []);
 
   const fetchProfile = async () => {
+    setError('');
     try {
       const res = await api.get('/profile');
       setUser(res.data.user);
@@ -37,6 +41,8 @@ export function Profile() {
         localStorage.removeItem('token');
         localStorage.removeItem('role');
         navigate('/login');
+      } else {
+        setError('Unable to load your profile.');
       }
     } finally {
       setLoading(false);
@@ -71,8 +77,9 @@ export function Profile() {
     }
   };
 
-  if (loading) return <div className="p-12 text-center">Loading...</div>;
-  if (!user) return null;
+  if (loading) return <LoadingState label="Loading your profile" />;
+  if (error) return <ErrorState message={error} onRetry={fetchProfile} />;
+  if (!user) return <ErrorState message="Your profile is unavailable." onRetry={fetchProfile} />;
 
   return (
     <div className="max-w-2xl mx-auto p-6 animate-in fade-in duration-500">

@@ -2,15 +2,21 @@ import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import api from '../lib/axios';
 import { useCurrencyStore } from '../store/currency';
+import LoadingState from '../components/ui/LoadingState';
+import ErrorState from '../components/ui/ErrorState';
 
 export const OrderStatus = () => {
     const { id } = useParams();
     const [transaction, setTransaction] = useState(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState('');
     const currentCurrency = useCurrencyStore((state) => state.currentCurrency);
     const format = useCurrencyStore((state) => state.format);
 
     useEffect(() => {
         const fetchOrder = async () => {
+            setLoading(true);
+            setError('');
             try {
                 // Determine if guest or logged in
         const token = localStorage.getItem('token');
@@ -43,14 +49,18 @@ export const OrderStatus = () => {
         const res = await api.get(url, { headers });
                 setTransaction(res.data.data);
             } catch (err) {
-                console.error(err);
+                setError(err.response?.status === 404 ? 'Order not found.' : 'Unable to load this order.');
+            } finally {
+                setLoading(false);
             }
         };
 
         fetchOrder();
     }, [id]);
 
-    if (!transaction) return <div className="p-8 text-center">Loading or order not found...</div>;
+    if (loading) return <LoadingState label="Loading order" />;
+    if (error) return <ErrorState message={error} />;
+    if (!transaction) return <ErrorState message="Order is unavailable." />;
 
     const statusColors = {
         pending: 'bg-yellow-100 text-yellow-800',
