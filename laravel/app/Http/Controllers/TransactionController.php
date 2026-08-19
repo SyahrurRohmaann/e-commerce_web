@@ -3,7 +3,13 @@
 namespace App\Http\Controllers;
 
 use App\Models\Transaction;
+use App\Services\PaymentTransitionService;
+use App\Support\CanonicalAmount;
+use GuzzleHttp\Client;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
+use Xendit\Configuration;
+use Xendit\Invoice\InvoiceApi;
 
 class TransactionController extends Controller
 {
@@ -17,6 +23,7 @@ class TransactionController extends Controller
     public function userTransactions(Request $request)
     {
         $transactions = Transaction::with(['items'])->where('user_id', $request->user()->id)->orderBy('created_at', 'desc')->get();
+
         return response()->json(['data' => $transactions]);
     }
 
@@ -27,28 +34,30 @@ class TransactionController extends Controller
         }
 
         $this->syncStatusWithXendit($transaction);
+
         return response()->json(['data' => $transaction->load(['items'])]);
     }
 
     public function show(Transaction $transaction)
     {
         $this->syncStatusWithXendit($transaction);
+
         return response()->json(['data' => $transaction->load(['user', 'items'])]);
     }
 
     public function showGuest(Request $request, $id)
     {
         $token = $request->query('token');
-        if (!$token) {
+        if (! $token) {
             return response()->json(['message' => 'Tracking token required'], 400);
         }
 
         $transaction = Transaction::with(['items'])->where('id', $id)->where('tracking_token', $token)->first();
-        
-        if (!$transaction) {
+
+        if (! $transaction) {
             return response()->json(['message' => 'Not found'], 404);
         }
-        
+
         $this->syncStatusWithXendit($transaction);
 
         return response()->json(['data' => $transaction]);
@@ -57,16 +66,16 @@ class TransactionController extends Controller
     public function trackGuest(Request $request)
     {
         $token = $request->query('token');
-        if (!$token) {
+        if (! $token) {
             return response()->json(['message' => 'Tracking token required'], 400);
         }
 
         $transaction = Transaction::with(['items'])->where('tracking_token', $token)->first();
-        
-        if (!$transaction) {
+
+        if (! $transaction) {
             return response()->json(['message' => 'Not found'], 404);
         }
-        
+
         $this->syncStatusWithXendit($transaction);
 
         return response()->json(['data' => $transaction]);
@@ -74,87 +83,56 @@ class TransactionController extends Controller
 
     private function syncStatusWithXendit(Transaction $transaction)
     {
-        if ($transaction->status !== 'PENDING' || !$transaction->xendit_invoice_id) {
+        if ($transaction->status !== 'PENDING' || ! $transaction->xendit_invoice_id) {
             return;
         }
 
         try {
-            \Xendit\Configuration::setXenditKey(env('XENDIT_API_KEY'));
-            $client = new \GuzzleHttp\Client(['verify' => false]);
-            $apiInstance = new \Xendit\Invoice\InvoiceApi($client);
-            
+            Configuration::setXenditKey(config('services.xendit.api_key'));
+            $client = new Client;
+            $apiInstance = new InvoiceApi($client);
+
             $invoice = $apiInstance->getInvoiceById($transaction->xendit_invoice_id);
 
-            if (isset($invoice['status']) && $invoice['status'] !== 'PENDING') {
-                $status = $invoice['status'];
-                
-                \Illuminate\Support\Facades\DB::transaction(function () use ($transaction, $invoice, $status) {
-                    $transaction->refresh();
-                    if ($transaction->status !== 'PENDING') return;
-
-                    $updateData = ['status' => $status];
-                    if (isset($invoice['payment_channel'])) {
-                        $updateData['payment_method'] = $invoice['payment_channel'];
-                    } elseif (isset($invoice['payment_method'])) {
-                        $updateData['payment_method'] = $invoice['payment_method'];
-                    }
-
-                    if ($status === 'PAID') {
-                        $transaction->update($updateData);
-                        foreach ($transaction->items as $item) {
-                            if ($item->product_id) {
-                                \App\Models\Product::where('id', $item->product_id)->decrement('stock', $item->quantity);
-                            }
-                        }
-
-                        $email = $transaction->user ? $transaction->user->email : $transaction->guest_email;
-                        if ($email) {
-                            try {
-                                \Illuminate\Support\Facades\Mail::to($email)->send(new \App\Mail\OrderPaymentSuccessMail($transaction));
-                            } catch (\Exception $e) {
-                                \Illuminate\Support\Facades\Log::error('Failed sending payment success email via sync: ' . $e->getMessage());
-                            }
-                        }
-                    } elseif ($status === 'EXPIRED') {
-                        $transaction->update($updateData);
-                    }
-                });
+            if (isset($invoice['status']) && in_array($invoice['status'], ['PAID', 'SETTLED', 'EXPIRED'], true)
+                && isset($invoice['id'], $invoice['external_id'], $invoice['amount'])
+                && hash_equals((string) $transaction->xendit_invoice_id, (string) $invoice['id'])
+                && hash_equals('INV-'.$transaction->id, (string) $invoice['external_id'])
+                && CanonicalAmount::equals((string) $transaction->total_amount, $invoice['amount'])) {
+                $status = $invoice['status'] === 'SETTLED' ? 'PAID' : $invoice['status'];
+                app(PaymentTransitionService::class)->transition(
+                    $transaction->id,
+                    $status,
+                    $invoice['payment_channel'] ?? $invoice['payment_method'] ?? null,
+                );
             }
         } catch (\Exception $e) {
-            \Illuminate\Support\Facades\Log::error('Failed to sync Xendit status: ' . $e->getMessage());
+            Log::error('Failed to sync Xendit status.', ['exception' => $e::class]);
         }
     }
-    
+
     public function updateStatus(Request $request, Transaction $transaction)
     {
         $request->validate([
             'status' => 'sometimes|required|in:PENDING,PAID,EXPIRED',
-            'shipping_status' => 'sometimes|required|in:pending,shipping,arrive'
+            'shipping_status' => 'sometimes|required|in:pending,shipping,arrive',
         ]);
 
         $updates = [];
 
         // Manual Payment Status Update
         if ($request->has('status') && $request->status !== $transaction->status) {
-            $updates['status'] = $request->status;
-            
-            // Kurangi stok jika admin menandai PAID secara manual
-            if ($request->status === 'PAID') {
-                foreach ($transaction->items as $item) {
-                    if ($item->product_id) {
-                        \App\Models\Product::where('id', $item->product_id)->decrement('stock', $item->quantity);
-                    }
-                }
-
-                $email = $transaction->user ? $transaction->user->email : $transaction->guest_email;
-                if ($email) {
-                    try {
-                        \Illuminate\Support\Facades\Mail::to($email)->send(new \App\Mail\OrderPaymentSuccessMail($transaction));
-                    } catch (\Exception $e) {
-                        \Illuminate\Support\Facades\Log::error('Failed sending payment success email via admin update: ' . $e->getMessage());
-                    }
-                }
+            try {
+                $result = app(PaymentTransitionService::class)->transition($transaction->id, $request->status);
+            } catch (\RuntimeException) {
+                return response()->json(['message' => 'Payment status transition conflict'], 409);
             }
+
+            if (! $result) {
+                return response()->json(['message' => 'Transaction not found'], 404);
+            }
+
+            $transaction->refresh();
         }
 
         // Shipping Status Update
@@ -164,7 +142,7 @@ class TransactionController extends Controller
                 if ($checkStatus !== 'PAID') {
                     return response()->json(['message' => 'Pesanan belum dibayar. Tidak bisa ubah ke status shipping.'], 400);
                 }
-                
+
                 $request->validate([
                     'shipping_method' => 'required|string',
                     'shipping_courier' => 'required|string',
@@ -172,9 +150,9 @@ class TransactionController extends Controller
                 ], [
                     'shipping_method.required' => 'Jenis pengiriman wajib diisi.',
                     'shipping_courier.required' => 'Kurir wajib diisi.',
-                    'tracking_number.required' => 'Nomor resi wajib diisi.'
+                    'tracking_number.required' => 'Nomor resi wajib diisi.',
                 ]);
-                
+
                 $updates['shipping_status'] = 'shipping';
                 $updates['shipping_method'] = $request->shipping_method;
                 $updates['shipping_courier'] = $request->shipping_courier;
@@ -184,11 +162,10 @@ class TransactionController extends Controller
             }
         }
 
-        if (!empty($updates)) {
+        if (! empty($updates)) {
             $transaction->update($updates);
         }
 
         return response()->json(['data' => $transaction, 'message' => 'Status updated']);
     }
 }
-

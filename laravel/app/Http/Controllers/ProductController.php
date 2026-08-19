@@ -22,8 +22,8 @@ class ProductController extends Controller
             'description' => 'nullable|string',
             'price' => 'required|numeric|min:0',
             'stock' => 'required|integer|min:0',
-            'image_url' => 'nullable|url',
-            'hover_image_url' => 'nullable|url',
+            'image_url' => ['nullable', 'url', 'starts_with:https://'],
+            'hover_image_url' => ['nullable', 'url', 'starts_with:https://'],
         ]);
 
         $product = Product::create($validated);
@@ -43,8 +43,8 @@ class ProductController extends Controller
             'description' => 'nullable|string',
             'price' => 'sometimes|required|numeric|min:0',
             'stock' => 'sometimes|required|integer|min:0',
-            'image_url' => 'nullable|url',
-            'hover_image_url' => 'nullable|url',
+            'image_url' => ['nullable', 'url', 'starts_with:https://'],
+            'hover_image_url' => ['nullable', 'url', 'starts_with:https://'],
         ]);
 
         $product->update($validated);

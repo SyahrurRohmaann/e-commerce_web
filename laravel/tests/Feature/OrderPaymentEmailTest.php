@@ -2,13 +2,16 @@
 
 namespace Tests\Feature;
 
-use App\Models\Product;
+use App\Jobs\ProcessPaymentEmailOutbox;
+use App\Mail\OrderPaymentSuccessMail;
 use App\Models\Category;
+use App\Models\Product;
 use App\Models\Transaction;
 use App\Models\TransactionItem;
-use App\Mail\OrderPaymentSuccessMail;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Queue;
 use Tests\TestCase;
 
 class OrderPaymentEmailTest extends TestCase
@@ -18,6 +21,8 @@ class OrderPaymentEmailTest extends TestCase
     public function test_email_sent_when_transaction_becomes_paid_via_webhook()
     {
         Mail::fake();
+        Queue::fake();
+        config(['services.xendit.callback_token' => 'test-callback-token']);
 
         $category = Category::create(['name' => 'General']);
 
@@ -30,6 +35,7 @@ class OrderPaymentEmailTest extends TestCase
 
         $transaction = Transaction::create([
             'tracking_token' => 'test-token-123',
+            'xendit_invoice_id' => 'xendit-invoice-1',
             'total_amount' => 125000,
             'status' => 'PENDING',
             'customer_name' => 'John Guest',
@@ -51,15 +57,26 @@ class OrderPaymentEmailTest extends TestCase
         ]);
 
         $payload = [
-            'external_id' => 'INV-' . $transaction->id,
+            'id' => 'xendit-invoice-1',
+            'external_id' => 'INV-'.$transaction->id,
             'status' => 'PAID',
+            'amount' => 125000,
             'payment_channel' => 'QRIS',
         ];
 
         $response = $this->withHeaders([
-            'x-callback-token' => env('XENDIT_CALLBACK_TOKEN'),
+            'x-callback-token' => 'test-callback-token',
         ])->postJson('/api/webhook/xendit', $payload);
         $response->assertStatus(200);
+
+        Artisan::call('payments:dispatch-email-outbox');
+        $job = null;
+        Queue::assertPushed(ProcessPaymentEmailOutbox::class, function (ProcessPaymentEmailOutbox $queued) use (&$job) {
+            $job = $queued;
+
+            return true;
+        });
+        $job->handle();
 
         Mail::assertSent(OrderPaymentSuccessMail::class, function ($mail) {
             return $mail->hasTo('guest@example.com') && $mail->transaction->tracking_token === 'test-token-123';

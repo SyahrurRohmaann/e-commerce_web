@@ -3,6 +3,8 @@ import { useNavigate, Link } from 'react-router-dom';
 import { toast } from 'sonner';
 import { useCurrencyStore } from '../store/currency';
 import api from '../lib/axios';
+import LoadingState from '../components/ui/LoadingState';
+import ErrorState from '../components/ui/ErrorState';
 
 export const TrackOrder = () => {
   const [orders, setOrders] = useState([]);
@@ -10,6 +12,7 @@ export const TrackOrder = () => {
   const [searchToken, setSearchToken] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [userOrdersLoading, setUserOrdersLoading] = useState(false);
   const navigate = useNavigate();
   const currentCurrency = useCurrencyStore((state) => state.currentCurrency);
   const format = useCurrencyStore((state) => state.format);
@@ -62,16 +65,21 @@ export const TrackOrder = () => {
   }, [isGuest, navigate]);
 
   const fetchUserOrders = async () => {
+    setUserOrdersLoading(true);
+    setError('');
     try {
       const res = await api.get('/profile/transactions');
       setUserOrders(res.data.data);
-    } catch (err) {
-      console.error('Failed to fetch orders', err);
+    } catch {
+      setError('Unable to load your orders.');
+    } finally {
+      setUserOrdersLoading(false);
     }
   };
 
   const handleSearch = async (e) => {
     e.preventDefault();
+    if (loading || !searchToken.trim()) return;
     setLoading(true);
 
     try {
@@ -110,7 +118,7 @@ export const TrackOrder = () => {
       <div className="max-w-3xl mx-auto p-6 mt-8 animate-in fade-in duration-500">
         <h1 className="text-3xl font-serif mb-8 text-center">My Orders</h1>
         
-        {userOrders.length === 0 ? (
+        {userOrdersLoading ? <LoadingState label="Loading your orders" /> : error ? <ErrorState message={error} onRetry={fetchUserOrders} /> : userOrders.length === 0 ? (
           <p className="text-gallery-subtle text-center py-8">No orders found.</p>
         ) : (
           <div className="space-y-6">

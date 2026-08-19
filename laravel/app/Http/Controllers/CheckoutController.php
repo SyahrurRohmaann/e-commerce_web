@@ -5,11 +5,13 @@ namespace App\Http\Controllers;
 use App\Models\Product;
 use App\Models\Transaction;
 use App\Models\TransactionItem;
+use GuzzleHttp\Client;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Xendit\Configuration;
-use Xendit\Invoice\InvoiceApi;
 use Xendit\Invoice\CreateInvoiceRequest;
+use Xendit\Invoice\InvoiceApi;
 
 class CheckoutController extends Controller
 {
@@ -19,7 +21,7 @@ class CheckoutController extends Controller
             'items' => 'required|array|min:1',
             'items.*.product_id' => 'required|exists:products,id',
             'items.*.quantity' => 'required|integer|min:1',
-            
+
             'customer_name' => 'required|string',
             'customer_phone' => 'required|string',
             'shipping_address' => 'required|string',
@@ -32,7 +34,7 @@ class CheckoutController extends Controller
 
         $user = auth('sanctum')->user();
 
-        if (!$user) {
+        if (! $user) {
             $request->validate(['guest_email' => 'required|email']);
         }
 
@@ -56,7 +58,7 @@ class CheckoutController extends Controller
                     'price' => $product->price,
                 ];
             }
-            
+
             $shippingCost = 25000;
             $totalAmount += $shippingCost;
 
@@ -73,14 +75,14 @@ class CheckoutController extends Controller
                 ]);
             }
 
-            $trackingToken = $user ? null : \Illuminate\Support\Str::uuid()->toString();
+            $trackingToken = $user ? null : Str::uuid()->toString();
 
             $transaction = Transaction::create([
                 'user_id' => $user ? $user->id : null,
                 'tracking_token' => $trackingToken,
                 'total_amount' => $totalAmount,
                 'status' => 'PENDING',
-                
+
                 'customer_name' => $request->customer_name,
                 'customer_phone' => $request->customer_phone,
                 'guest_email' => $user ? null : $request->guest_email,
@@ -99,38 +101,34 @@ class CheckoutController extends Controller
                 TransactionItem::create($item);
             }
 
-            Configuration::setXenditKey(env('XENDIT_API_KEY'));
-            
-            $client = new \GuzzleHttp\Client(['verify' => false]);
+            Configuration::setXenditKey(config('services.xendit.api_key'));
+
+            $client = new Client;
             $apiInstance = new InvoiceApi($client);
 
             $payerEmail = $user ? $user->email : $request->guest_email;
 
             $createInvoiceRequest = new CreateInvoiceRequest([
-                'external_id' => 'INV-' . $transaction->id,
+                'external_id' => 'INV-'.$transaction->id,
                 'amount' => $totalAmount,
                 'payer_email' => $payerEmail,
-                'description' => 'Invoice for Transaction #' . $transaction->id,
-                'success_redirect_url' => env('FRONTEND_URL', 'http://localhost:5173') . '/checkout/success',
-                'failure_redirect_url' => env('FRONTEND_URL', 'http://localhost:5173') . '/checkout/failure',
+                'description' => 'Invoice for Transaction #'.$transaction->id,
+                'success_redirect_url' => env('FRONTEND_URL', 'http://localhost:5173').'/checkout/success',
+                'failure_redirect_url' => env('FRONTEND_URL', 'http://localhost:5173').'/checkout/failure',
             ]);
 
-            try {
-                $result = $apiInstance->createInvoice($createInvoiceRequest);
-                
-                $transaction->update([
-                    'xendit_invoice_id' => $result['id'],
-                    'invoice_url' => $result['invoice_url']
-                ]);
+            $result = $apiInstance->createInvoice($createInvoiceRequest);
 
-                return response()->json([
-                    'transaction_id' => $transaction->id,
-                    'invoice_url' => $result['invoice_url'],
-                    'tracking_token' => $trackingToken
-                ]);
-            } catch (\Exception $e) {
-                return response()->json(['message' => 'Failed to create invoice.', 'error' => $e->getMessage()], 500);
-            }
+            $transaction->update([
+                'xendit_invoice_id' => $result['id'],
+                'invoice_url' => $result['invoice_url'],
+            ]);
+
+            return response()->json([
+                'transaction_id' => $transaction->id,
+                'invoice_url' => $result['invoice_url'],
+                'tracking_token' => $trackingToken,
+            ]);
         });
     }
 }

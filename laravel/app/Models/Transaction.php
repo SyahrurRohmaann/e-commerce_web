@@ -7,11 +7,11 @@ use Illuminate\Database\Eloquent\Model;
 class Transaction extends Model
 {
     protected $fillable = [
-        'user_id', 
+        'user_id',
         'tracking_token',
-        'xendit_invoice_id', 
-        'invoice_url', 
-        'total_amount', 
+        'xendit_invoice_id',
+        'invoice_url',
+        'total_amount',
         'status',
         'payment_method',
         'customer_name',
@@ -27,8 +27,18 @@ class Transaction extends Model
         'shipping_status',
         'shipping_method',
         'shipping_courier',
-        'tracking_number'
+        'tracking_number',
+        'payment_processed_at',
+        'payment_email_sent_at',
     ];
+
+    protected function casts(): array
+    {
+        return [
+            'payment_processed_at' => 'datetime',
+            'payment_email_sent_at' => 'datetime',
+        ];
+    }
 
     public function user()
     {
@@ -40,4 +50,3 @@ class Transaction extends Model
         return $this->hasMany(TransactionItem::class);
     }
 }
-

@@ -1,72 +1,91 @@
-import { useState, useEffect } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import api from '../lib/axios';
 import { useCartStore } from '../store/cart';
 import { useCurrencyStore } from '../store/currency';
 import { HeroSlider } from '../components/HeroSlider';
+import { ProductDiscovery } from '../components/ProductDiscovery';
+
+function CollectionState({ children }) {
+  return (
+    <section id="collection" className="max-w-7xl mx-auto px-6 py-24 sm:py-32 text-center">
+      {children}
+    </section>
+  );
+}
 
 export function Home() {
   const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+  const requestController = useRef(null);
+  const mounted = useRef(true);
   const addItem = useCartStore(state => state.addItem);
-  const currentCurrency = useCurrencyStore(state => state.currentCurrency);
   const format = useCurrencyStore(state => state.format);
-  
-  useEffect(() => {
-    api.get('/catalog').then(res => setProducts(res.data.data));
+
+  const loadProducts = useCallback(async () => {
+    requestController.current?.abort();
+    const controller = new AbortController();
+    requestController.current = controller;
+    setLoading(true);
+    setError(false);
+
+    try {
+      const response = await api.get('/catalog', { signal: controller.signal });
+      if (!Array.isArray(response.data?.data)) throw new Error('Invalid catalog response');
+      if (mounted.current && !controller.signal.aborted) setProducts(response.data.data);
+    } catch {
+      if (mounted.current && !controller.signal.aborted) {
+        setProducts([]);
+        setError(true);
+      }
+    } finally {
+      if (mounted.current && !controller.signal.aborted) setLoading(false);
+    }
   }, []);
 
-  if (products.length === 0) return <div className="h-screen flex items-center justify-center text-gallery-subtle uppercase tracking-widest text-sm">Curating collection...</div>;
-
-  const galleryProducts = products;
+  useEffect(() => {
+    mounted.current = true;
+    loadProducts();
+    return () => {
+      mounted.current = false;
+      requestController.current?.abort();
+    };
+  }, [loadProducts]);
 
   return (
     <div className="animate-in fade-in duration-1000">
-      {/* Hero Slider Section */}
       <HeroSlider />
-
-      {/* Gallery Section */}
-      <section id="collection" className="max-w-7xl mx-auto px-6 py-32">
-        <div className="flex justify-between items-end mb-16 border-b border-gallery-stone pb-8">
-          <h2 className="text-3xl font-serif">The Collection</h2>
-          <span className="text-sm tracking-widest uppercase text-gallery-subtle">{galleryProducts.length} Pieces</span>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-12 gap-y-24">
-          {galleryProducts.map(p => (
-            <div key={p.id} className="group flex flex-col">
-              <div className="aspect-[4/5] bg-gallery-stone mb-6 overflow-hidden relative">
-                <img 
-                  src={p.image_url} 
-                  alt={p.name}
-                  className={`w-full h-full object-cover transition-opacity duration-700 group-hover:scale-105 ${p.hover_image_url ? 'group-hover:opacity-0 absolute inset-0 z-10' : ''}`}
-                  onError={(e) => { e.target.src = 'https://images.unsplash.com/photo-1584916201218-f4242ceb4809?auto=format&fit=crop&q=80&w=800'; }}
-                />
-                {p.hover_image_url && (
-                    <img 
-                      src={p.hover_image_url} 
-                      alt={`${p.name} alternate view`}
-                      className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105 absolute inset-0 z-0"
-                      onError={(e) => { e.target.style.display = 'none'; }}
-                    />
-                )}
-                <button 
-                  onClick={() => addItem(p)} 
-                  disabled={p.stock < 1}
-                  className="absolute bottom-0 left-0 z-20 w-full bg-gallery-ink text-white py-4 text-xs tracking-widest uppercase translate-y-full group-hover:translate-y-0 transition-transform duration-300 disabled:bg-gallery-subtle"
-                >
-                  {p.stock < 1 ? 'Unavailable' : 'Add to Cart'}
-                </button>
-              </div>
-              <div className="flex justify-between items-start">
-                <div>
-                  <h3 className="text-lg font-serif mb-1">{p.name}</h3>
-                  <p className="text-xs text-gallery-subtle uppercase tracking-widest">{p.category?.name}</p>
-                </div>
-                <p className="text-sm font-medium">{format(p.price)}</p>
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
+      {loading ? (
+        <CollectionState>
+          <p role="status" className="text-sm uppercase tracking-[0.22em] text-gallery-subtle">
+            Curating the collection…
+          </p>
+        </CollectionState>
+      ) : error ? (
+        <CollectionState>
+          <p className="mb-4 text-[10px] font-semibold uppercase tracking-[0.3em] text-gallery-subtle">The seasonal edit</p>
+          <h2 className="text-4xl sm:text-5xl font-serif tracking-[-0.025em]">The collection is temporarily unavailable</h2>
+          <p className="mx-auto mt-5 max-w-xl text-sm leading-7 text-gallery-subtle">
+            We could not prepare the edit right now. Try again when you are ready.
+          </p>
+          <button type="button" onClick={loadProducts} className="mt-8 border border-gallery-ink px-6 py-3 text-xs font-semibold uppercase tracking-[0.18em] hover:bg-gallery-ink hover:text-white transition-colors">
+            Retry collection
+          </button>
+        </CollectionState>
+      ) : products.length === 0 ? (
+        <CollectionState>
+          <p className="mb-4 text-[10px] font-semibold uppercase tracking-[0.3em] text-gallery-subtle">The seasonal edit</p>
+          <h2 className="text-4xl sm:text-5xl font-serif tracking-[-0.025em]">The next edit is on its way</h2>
+          <p className="mx-auto mt-5 max-w-xl text-sm leading-7 text-gallery-subtle">
+            New pieces are being considered. Return soon to discover the collection.
+          </p>
+          <button type="button" onClick={loadProducts} className="mt-8 border border-gallery-ink px-6 py-3 text-xs font-semibold uppercase tracking-[0.18em] hover:bg-gallery-ink hover:text-white transition-colors">
+            Retry collection
+          </button>
+        </CollectionState>
+      ) : (
+        <ProductDiscovery products={products} addItem={addItem} format={format} />
+      )}
     </div>
   );
 }

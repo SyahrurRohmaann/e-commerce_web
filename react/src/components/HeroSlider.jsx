@@ -1,323 +1,162 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import api from '../lib/axios';
 
-// Helper to calculate Tailwind positioning classes for 9-point grid
-function getPositionClasses(pos = 'tc') {
-  const map = {
-    tl: { container: 'top-12 left-12 text-left items-start', align: 'text-left' },
-    tc: { container: 'top-12 left-1/2 -translate-x-1/2 text-center items-center', align: 'text-center' },
-    tr: { container: 'top-12 right-12 text-right items-end', align: 'text-right' },
-    ml: { container: 'top-1/2 left-12 -translate-y-1/2 text-left items-start', align: 'text-left' },
-    mc: { container: 'top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-center items-center', align: 'text-center' },
-    mr: { container: 'top-1/2 right-12 -translate-y-1/2 text-right items-end', align: 'text-right' },
-    bl: { container: 'bottom-28 left-12 text-left items-start', align: 'text-left' },
-    bc: { container: 'bottom-28 left-1/2 -translate-x-1/2 text-center items-center', align: 'text-center' },
-    br: { container: 'bottom-28 right-12 text-right items-end', align: 'text-right' },
-  };
-  return map[pos] || map.tc;
+function HeroLink({ href, className, children }) {
+  if (href?.startsWith('#')) {
+    return <a href={href} className={className}>{children}</a>;
+  }
+
+  return <a href={href || '/#collection'} className={className}>{children}</a>;
 }
+
+const fallbackBanners = [
+  {
+    id: 1,
+    title: 'Form, without noise.',
+    caption: 'The new collection',
+    subtitle: 'Clean lines, honest materials, and pieces selected to outlive the season.',
+    image_url: 'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?auto=format&fit=crop&q=88&w=1800&h=1200',
+    layout_direction: 'text-left',
+    panel_theme: 'stone',
+    image_position: '50% 45%',
+    text_alignment: 'left',
+    button_text: 'View the edit',
+    button_url: '/#collection',
+    duration_ms: 6000,
+  },
+];
+
+const panelThemes = {
+  ivory: 'bg-gallery-white text-gallery-ink',
+  stone: 'bg-gallery-stone text-gallery-ink',
+  ink: 'bg-gallery-ink text-gallery-white',
+};
 
 export function HeroSlider() {
   const [banners, setBanners] = useState([]);
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [isDragging, setIsDragging] = useState(false);
-  const [dragStart, setDragStart] = useState(0);
-  const [dragDelta, setDragDelta] = useState(0);
-  const [duration, setDuration] = useState(5000);
   const [isPaused, setIsPaused] = useState(false);
-
-  const containerRef = useRef(null);
-  const autoPlayTimer = useRef(null);
   const transitionRef = useRef(false);
 
   useEffect(() => {
-    api.get('/hero-banners').then(res => {
-      const data = res.data.data || [];
-      setBanners(data);
-      if (data.length > 0) {
-        const dur = data[0].duration_ms || 5000;
-        setDuration(dur);
-      }
-    }).catch(() => {
-      // Fallback banners if API fails
-      setBanners([
-        {
-          id: 1,
-          title: 'NEW COLLECTION',
-          caption: 'Spring / Summer 2026',
-          subtitle: 'Discover our latest arrivals designed for movement',
-          image_url: 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?auto=format&fit=crop&q=80&w=1600&h=900',
-          title_position: 'tc',
-          caption_position: 'tc',
-          button_position: 'bc',
-          button_text: 'Shop Now',
-          button_url: '/catalog',
-          duration_ms: 5000,
-        },
-        {
-          id: 2,
-          title: 'SUMMER SALE',
-          caption: 'Limited Time Offer',
-          subtitle: 'Up to 50% off selected items',
-          image_url: 'https://images.unsplash.com/photo-1469334031218-e382a71b716b?auto=format&fit=crop&q=80&w=1600&h=900',
-          title_position: 'tl',
-          caption_position: 'tl',
-          button_position: 'bl',
-          button_text: 'View Deals',
-          button_url: '/sale',
-          duration_ms: 5000,
-        },
-        {
-          id: 3,
-          title: 'PREMIUM QUALITY',
-          caption: 'Crafted with Precision',
-          subtitle: 'Experience luxury in every detail',
-          image_url: 'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?auto=format&fit=crop&q=80&w=1600&h=900',
-          title_position: 'tr',
-          caption_position: 'tr',
-          button_position: 'br',
-          button_text: 'Learn More',
-          button_url: '/about',
-          duration_ms: 5000,
-        },
-      ]);
-    });
+    api.get('/hero-banners')
+      .then((res) => setBanners(res.data.data?.length ? res.data.data : fallbackBanners))
+      .catch(() => setBanners(fallbackBanners));
   }, []);
 
   const goToSlide = useCallback((index) => {
-    if (banners.length === 0 || transitionRef.current) return;
+    if (!banners.length || transitionRef.current) return;
     transitionRef.current = true;
     setCurrentIndex(index);
-    setTimeout(() => { transitionRef.current = false; }, 600);
+    window.setTimeout(() => { transitionRef.current = false; }, 700);
   }, [banners.length]);
 
   const nextSlide = useCallback(() => {
-    const next = (currentIndex + 1) % banners.length;
-    goToSlide(next);
-  }, [currentIndex, banners.length, goToSlide]);
+    goToSlide((currentIndex + 1) % banners.length);
+  }, [banners.length, currentIndex, goToSlide]);
 
-  const prevSlide = useCallback(() => {
-    const prev = (currentIndex - 1 + banners.length) % banners.length;
-    goToSlide(prev);
-  }, [currentIndex, banners.length, goToSlide]);
+  const previousSlide = useCallback(() => {
+    goToSlide((currentIndex - 1 + banners.length) % banners.length);
+  }, [banners.length, currentIndex, goToSlide]);
 
-  // Auto-play
   useEffect(() => {
-    if (banners.length === 0 || isPaused) {
-      if (autoPlayTimer.current) clearInterval(autoPlayTimer.current);
-      return;
-    }
+    if (banners.length < 2 || isPaused) return undefined;
+    const duration = banners[currentIndex]?.duration_ms || 6000;
+    const timer = window.setTimeout(nextSlide, duration);
+    return () => window.clearTimeout(timer);
+  }, [banners, currentIndex, isPaused, nextSlide]);
 
-    autoPlayTimer.current = setInterval(() => {
-      nextSlide();
-    }, duration);
-
-    return () => {
-      if (autoPlayTimer.current) clearInterval(autoPlayTimer.current);
-    };
-  }, [banners.length, duration, isPaused, nextSlide]);
-
-  // Drag handlers
-  const handlePointerDown = (e) => {
-    setIsDragging(true);
-    setDragStart(e.clientX);
-    setDragDelta(0);
-  };
-
-  const handlePointerMove = (e) => {
-    if (!isDragging) return;
-    setDragDelta(e.clientX - dragStart);
-  };
-
-  const handlePointerUp = () => {
-    if (!isDragging) return;
-    setIsDragging(false);
-
-    const threshold = 80;
-    if (dragDelta < -threshold) {
-      nextSlide();
-    } else if (dragDelta > threshold) {
-      prevSlide();
-    }
-
-    setDragStart(0);
-    setDragDelta(0);
-  };
-
-  const handleTouchStart = (e) => {
-    setIsDragging(true);
-    setDragStart(e.touches[0].clientX);
-    setDragDelta(0);
-  };
-
-  const handleTouchMove = (e) => {
-    if (!isDragging) return;
-    setDragDelta(e.touches[0].clientX - dragStart);
-  };
-
-  const handleTouchEnd = () => {
-    if (!isDragging) return;
-    setIsDragging(false);
-
-    const threshold = 50;
-    if (dragDelta < -threshold) {
-      nextSlide();
-    } else if (dragDelta > threshold) {
-      prevSlide();
-    }
-
-    setDragStart(0);
-    setDragDelta(0);
-  };
-
-  if (banners.length === 0) {
+  if (!banners.length) {
     return (
-      <section className="relative h-screen w-full bg-gallery-white flex items-center justify-center">
-        <div className="text-gallery-subtle uppercase tracking-widest text-sm">Loading collection...</div>
+      <section className="h-[76vh] min-h-[620px] bg-gallery-stone flex items-center justify-center">
+        <span className="text-xs uppercase tracking-[0.28em] text-gallery-subtle">Curating the edit...</span>
       </section>
     );
   }
 
   const banner = banners[currentIndex];
-  const titlePos = getPositionClasses(banner.title_position || 'tc');
-  const captionPos = getPositionClasses(banner.caption_position || 'tc');
-  const buttonPos = getPositionClasses(banner.button_position || 'bc');
+  const textFirst = (banner.layout_direction || 'text-left') === 'text-left';
+  const centered = banner.text_alignment === 'center';
+  const theme = panelThemes[banner.panel_theme] || panelThemes.ivory;
+  const position = banner.image_position || '50% 50%';
+  const counter = String(currentIndex + 1).padStart(2, '0');
+  const total = String(banners.length).padStart(2, '0');
 
   return (
     <section
-      className="relative h-[85vh] sm:h-[90vh] w-full overflow-hidden bg-gallery-white"
-      onPointerMove={handlePointerMove}
-      onPointerUp={handlePointerUp}
-      onTouchMove={handleTouchMove}
-      onTouchEnd={handleTouchEnd}
+      className="relative h-[76vh] min-h-[620px] max-h-[880px] overflow-hidden"
+      onMouseEnter={() => setIsPaused(true)}
+      onMouseLeave={() => setIsPaused(false)}
     >
-      {/* Background Image Container */}
-      <div
-        ref={containerRef}
-        className="absolute inset-0 cursor-grab active:cursor-grabbing"
-        onPointerDown={handlePointerDown}
-        onTouchStart={handleTouchStart}
-      >
-        {banners.map((item, index) => {
-          const isActive = index === currentIndex;
-          const isNext = index === (currentIndex + 1) % banners.length;
-          const isPrev = index === (currentIndex - 1 + banners.length) % banners.length;
+      <div className={`h-full grid grid-cols-1 lg:grid-cols-[43%_57%] ${textFirst ? '' : 'lg:grid-cols-[57%_43%]'}`}>
+        <div
+          key={`copy-${banner.id}`}
+          className={`${theme} ${textFirst ? 'lg:order-1' : 'lg:order-2'} flex items-center px-8 sm:px-14 lg:px-[7vw] py-14 animate-in fade-in duration-700`}
+        >
+          <div className={`w-full max-w-xl ${centered ? 'text-center mx-auto' : 'text-left'}`}>
+            {banner.caption && (
+              <p className="mb-7 text-[11px] font-semibold uppercase tracking-[0.28em] opacity-60">
+                {banner.caption}
+              </p>
+            )}
+            {banner.title && (
+              <h1 className="text-[clamp(3.4rem,6vw,7rem)] leading-[0.9] tracking-[-0.045em] font-serif whitespace-pre-line">
+                {banner.title}
+              </h1>
+            )}
+            {banner.subtitle && (
+              <p className={`mt-8 text-sm sm:text-base leading-7 opacity-65 ${centered ? 'mx-auto' : ''} max-w-md`}>
+                {banner.subtitle}
+              </p>
+            )}
+            {banner.button_text && (
+              <HeroLink
+                href={banner.button_url || '/#collection'}
+                className="inline-flex items-center gap-4 mt-10 pb-2 border-b border-current text-[11px] font-semibold uppercase tracking-[0.24em] hover:gap-7 transition-all duration-300"
+              >
+                {banner.button_text}
+                <span aria-hidden="true">→</span>
+              </HeroLink>
+            )}
+          </div>
+        </div>
 
-          return (
-            <div
+        <div className={`${textFirst ? 'lg:order-2' : 'lg:order-1'} relative min-h-[320px] overflow-hidden bg-gallery-stone`}>
+          {banners.map((item, index) => (
+            <img
               key={item.id}
-              className={`absolute inset-0 transition-all duration-700 ease-out ${
-                isActive
-                  ? 'opacity-100 scale-100'
-                  : isNext || isPrev
-                  ? 'opacity-0 scale-105'
-                  : 'opacity-0 scale-105'
+              src={item.image_url}
+              alt={item.title || item.caption || 'Alagance collection'}
+              className={`absolute inset-0 w-full h-full object-cover transition-all duration-1000 ease-out ${
+                index === currentIndex ? 'opacity-100 scale-100' : 'opacity-0 scale-[1.025]'
               }`}
-              style={{
-                transform: isActive
-                  ? 'scale(1.0) translateX(0)'
-                  : dragDelta !== 0 && index === currentIndex
-                  ? `scale(1.0) translateX(${dragDelta * 0.3}px)`
-                  : undefined,
-                transition: isDragging ? 'none' : 'all 700ms cubic-bezier(0.25, 0.46, 0.45, 0.94)',
-              }}
-            >
-              <div className="absolute inset-0">
-                <img
-                  src={item.image_url}
-                  alt={item.title}
-                  className="w-full h-full object-cover"
-                />
-                <div className="absolute inset-0 bg-black/25"></div>
-              </div>
+              style={{ objectPosition: index === currentIndex ? position : (item.image_position || '50% 50%') }}
+            />
+          ))}
+          {banners.length > 1 && (
+            <div className="absolute top-7 right-7 bg-gallery-white text-gallery-ink px-4 py-3 text-[10px] tracking-[0.2em]">
+              {counter} / {total}
             </div>
-          );
-        })}
-      </div>
-
-      {/* Dynamic 9-Point Grid Layers */}
-      
-      {/* Title Layer */}
-      {banner.title && (
-        <div className={`absolute z-10 max-w-2xl px-6 flex flex-col pointer-events-none text-white ${titlePos.container}`}>
-          <h1 className="text-4xl sm:text-6xl md:text-7xl font-serif font-bold tracking-wide animate-in fade-in slide-in-from-bottom-8 duration-700">
-            {banner.title}
-          </h1>
-          {banner.subtitle && (
-            <p className="text-base sm:text-lg md:text-xl font-light tracking-wide mt-3 opacity-90 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-150">
-              {banner.subtitle}
-            </p>
           )}
         </div>
-      )}
-
-      {/* Caption Layer */}
-      {banner.caption && (
-        <div className={`absolute z-10 max-w-md px-6 pointer-events-none text-white ${captionPos.container}`}>
-          <span className="inline-block text-xs sm:text-sm font-bold tracking-[0.25em] uppercase bg-white/20 backdrop-blur-md px-4 py-2 rounded-full border border-white/30 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-200">
-            {banner.caption}
-          </span>
-        </div>
-      )}
-
-      {/* Button Layer */}
-      {banner.button_text && (
-        <div className={`absolute z-10 px-6 ${buttonPos.container}`}>
-          <a
-            href={banner.button_url || '#'}
-            onClick={(e) => {
-              if (!banner.button_url || banner.button_url === '#') {
-                e.preventDefault();
-              }
-            }}
-            className="inline-block bg-white text-gallery-ink px-10 py-4 text-xs font-bold tracking-widest uppercase rounded-full hover:bg-gallery-stone/90 hover:-translate-y-1 hover:shadow-2xl transition-all duration-300 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-300"
-          >
-            {banner.button_text}
-          </a>
-        </div>
-      )}
-
-      {/* Navigation Arrows (Fixed Center Vertically) */}
-      {banners.length > 1 && (
-        <>
-          <button
-            onClick={prevSlide}
-            onMouseEnter={() => setIsPaused(true)}
-            onMouseLeave={() => setIsPaused(false)}
-            className="absolute left-4 sm:left-8 top-1/2 -translate-y-1/2 z-20 w-12 h-12 bg-white/20 backdrop-blur-sm border border-white/30 rounded-full flex items-center justify-center text-white hover:bg-white/40 transition-all duration-300 hover:-translate-x-1"
-          >
-            ←
-          </button>
-          <button
-            onClick={nextSlide}
-            onMouseEnter={() => setIsPaused(true)}
-            onMouseLeave={() => setIsPaused(false)}
-            className="absolute right-4 sm:right-8 top-1/2 -translate-y-1/2 z-20 w-12 h-12 bg-white/20 backdrop-blur-sm border border-white/30 rounded-full flex items-center justify-center text-white hover:bg-white/40 transition-all duration-300 hover:translate-x-1"
-          >
-            →
-          </button>
-        </>
-      )}
-
-      {/* Dot Indicators (Fixed Bottom-Center) */}
-      <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-20 flex gap-3">
-        {banners.map((_, index) => (
-          <button
-            key={index}
-            onClick={() => {
-              goToSlide(index);
-              setIsPaused(true);
-              setTimeout(() => setIsPaused(false), 3000);
-            }}
-            className={`transition-all duration-300 rounded-full ${
-              index === currentIndex
-                ? 'w-8 h-2 bg-white'
-                : 'w-2 h-2 bg-white/50 hover:bg-white/80'
-            }`}
-            aria-label={`Go to slide ${index + 1}`}
-          />
-        ))}
       </div>
+
+      {banners.length > 1 && (
+        <div className={`absolute bottom-7 ${textFirst ? 'left-8 sm:left-14 lg:left-[7vw]' : 'right-8 sm:right-14 lg:right-[7vw]'} flex items-center gap-5 ${banner.panel_theme === 'ink' ? 'text-gallery-white' : 'text-gallery-ink'}`}>
+          <button onClick={previousSlide} className="text-lg opacity-50 hover:opacity-100 transition-opacity" aria-label="Previous banner">←</button>
+          <div className="flex gap-2">
+            {banners.map((item, index) => (
+              <button
+                key={item.id}
+                onClick={() => goToSlide(index)}
+                className={`h-px transition-all duration-500 ${index === currentIndex ? 'w-12 bg-current' : 'w-5 bg-current opacity-25'}`}
+                aria-label={`Go to banner ${index + 1}`}
+              />
+            ))}
+          </div>
+          <button onClick={nextSlide} className="text-lg opacity-50 hover:opacity-100 transition-opacity" aria-label="Next banner">→</button>
+        </div>
+      )}
     </section>
   );
 }

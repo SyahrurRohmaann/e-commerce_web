@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 import { useCartStore } from '../store/cart';
 import { useCurrencyStore } from '../store/currency';
 import api from '../lib/axios';
+import { configuredInvoiceOrigins, invoiceRedirectUrl, normalizeApiError } from '../lib/apiError';
 import { getCountries, getStatesOfCountry, getCitiesOfState } from '@countrystatecity/countries-browser';
 
 const SHIPPING_COST = 25000;
@@ -192,6 +193,7 @@ export const Checkout = () => {
   };
 
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const invoiceOrigins = configuredInvoiceOrigins(import.meta.env.VITE_INVOICE_ORIGINS || '');
 
   const submitShipping = e => {
     e.preventDefault();
@@ -201,26 +203,33 @@ export const Checkout = () => {
   const doCheckout = async () => {
     if (isSubmitting) return;
     setIsSubmitting(true);
-    const payload = { items, ...formData };
+    const payload = { items: items.map(item => ({ ...item })), ...formData };
     // don't send guest_email for logged-in users
     if (!isGuest) delete payload.guest_email;
 
     try {
       const res = await api.post('/checkout', payload);
-      if (res.data.invoice_url) {
-        if (isGuest && res.data.tracking_token) {
+      const invoiceUrl = invoiceRedirectUrl(res.data?.invoice_url, invoiceOrigins);
+      if (invoiceUrl) {
+        if (isGuest && typeof res.data.tracking_token === 'string' && typeof res.data.transaction_id !== 'undefined') {
           const newOrder = {
             id: res.data.transaction_id,
             token: res.data.tracking_token,
             date: new Date().toISOString()
           };
-          const existing = JSON.parse(localStorage.getItem('guest_orders') || '[]');
+          let existing = [];
+          try { existing = JSON.parse(localStorage.getItem('guest_orders') || '[]'); } catch { existing = []; }
+          if (!Array.isArray(existing)) existing = [];
           localStorage.setItem('guest_orders', JSON.stringify([newOrder, ...existing]));
         }
-        window.location.href = res.data.invoice_url;
+        window.location.href = invoiceUrl;
+      } else {
+        throw new Error('Invalid checkout response');
       }
     } catch (err) {
-      toast.error(err.response?.data?.message || err.response?.data?.errors ? Object.values(err.response.data.errors).flat().join(', ') : 'Checkout failed');
+      const errors = err.response?.data?.errors;
+      const message = errors && typeof errors === 'object' ? Object.values(errors).flat().filter(value => typeof value === 'string').join(', ') : normalizeApiError(err).message;
+      toast.error(message || 'Checkout failed');
       setIsSubmitting(false);
     }
   };

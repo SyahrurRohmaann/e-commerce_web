@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import api from '../lib/axios';
+import LoadingState from '../components/ui/LoadingState';
+import ErrorState from '../components/ui/ErrorState';
 
 export function AdminCategories() {
   const [categories, setCategories] = useState([]);
@@ -8,15 +10,17 @@ export function AdminCategories() {
   const [form, setForm] = useState({ name: '', description: '' });
   const [editing, setEditing] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
 
   useEffect(() => { fetchCategories(); }, []);
 
   const fetchCategories = async () => {
+    setError('');
     try {
       const res = await api.get('/admin/categories');
       setCategories(res.data.data);
     } catch {
-      toast.error('Failed to load categories');
+      setError('Unable to load categories.');
     } finally {
       setLoading(false);
     }
@@ -83,7 +87,8 @@ export function AdminCategories() {
     ));
   };
 
-  if (loading) return <div className="text-sm tracking-widest uppercase text-gallery-subtle">Loading...</div>;
+  if (loading) return <LoadingState label="Loading categories" />;
+  if (error) return <ErrorState message={error} onRetry={fetchCategories} />;
 
   return (
     <div className="animate-in fade-in duration-500 max-w-4xl">
